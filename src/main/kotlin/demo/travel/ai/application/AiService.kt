@@ -1,15 +1,15 @@
-package demo.travel.ai
+package demo.travel.ai.application
 
-import tools.jackson.databind.ObjectMapper
-import tools.jackson.module.kotlin.readValue
-import demo.travel.ai.dto.AiRequest
-import demo.travel.ai.dto.AiBlock
-import demo.travel.ai.dto.AppliedBlock
-import demo.travel.ai.dto.ApplyResponse
-import demo.travel.ai.dto.GenerateResponse
-import demo.travel.block.dto.BlockResponse
-import demo.travel.block.ScheduleBlock
+import demo.travel.ai.client.GooglePlacesClient
+import demo.travel.ai.client.OpenAiClient
+import demo.travel.ai.presentation.dto.AiBlock
+import demo.travel.ai.presentation.dto.AiRequest
+import demo.travel.ai.presentation.dto.AppliedBlock
+import demo.travel.ai.presentation.dto.ApplyResponse
+import demo.travel.ai.presentation.dto.GenerateResponse
 import demo.travel.block.BlockRepository
+import demo.travel.block.ScheduleBlock
+import demo.travel.block.dto.BlockResponse
 import demo.travel.trip.TripMemberRepository
 import demo.travel.trip.TripRepository
 import demo.travel.trip.TripRole
@@ -20,9 +20,11 @@ import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import org.springframework.web.server.ResponseStatusException
+import tools.jackson.databind.ObjectMapper
+import tools.jackson.module.kotlin.readValue
 import java.time.LocalTime
 import java.time.temporal.ChronoUnit
-import java.util.*
+import java.util.UUID
 import java.util.concurrent.TimeUnit
 
 @Service

@@ -1,4 +1,4 @@
-package demo.travel.ai
+package demo.travel.ai.client
 
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value

@@ -1,11 +1,12 @@
-package demo.travel.ai
+package demo.travel.ai.client
 
-import tools.jackson.databind.ObjectMapper
-import tools.jackson.module.kotlin.readValue
-import demo.travel.ai.dto.AiBlock
+import demo.travel.ai.client.properties.OpenAiProperties
+import demo.travel.ai.presentation.dto.AiBlock
 import org.springframework.http.client.JdkClientHttpRequestFactory
 import org.springframework.stereotype.Component
 import org.springframework.web.client.RestClient
+import tools.jackson.databind.ObjectMapper
+import tools.jackson.module.kotlin.readValue
 import java.net.http.HttpClient
 import java.time.Duration
 

@@ -1,4 +1,4 @@
-package demo.travel.ai
+package demo.travel.ai.client.properties
 
 import org.springframework.boot.context.properties.ConfigurationProperties
 

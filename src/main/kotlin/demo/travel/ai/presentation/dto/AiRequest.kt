@@ -1,4 +1,4 @@
-package demo.travel.ai.dto
+package demo.travel.ai.presentation.dto
 
 import demo.travel.block.BlockType
 
