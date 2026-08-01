@@ -56,8 +56,20 @@ data class KakaoUserInfo(val id: String, val email: String?, val nickname: Strin
 
 ## persistence(entity)
 
-JPA 엔티티를 쓰기·읽기 양쪽에 그대로 사용하므로 별도의 영속성 DTO 계층을 두지 않는다. 엔티티가 application/presentation
-레이어를 넘나드는 것을 허용한다(예: `@CurrentUser` 로 받은 `User` 엔티티를 컨트롤러가 직접 읽어 `Response`를 구성).
+JPA 엔티티를 쓰기·읽기 양쪽에 그대로 사용하므로 별도의 영속성 DTO 계층을 두지 않는다. 대신 **엔티티는 application까지만
+등장할 수 있고, 그 위(presentation)로는 역류하지 않는다.** application은 repository에서 꺼낸 엔티티를 그대로 리턴하지
+않고, `Result`로 필요한 필드만 뽑아 변환한 뒤 presentation에 넘긴다.
+
+```kotlin
+// application/AuthService.kt
+fun signup(command: AuthCommand.Signup): TokenPair {   // TokenPair(Result) — User 엔티티 자체는 리턴하지 않음
+    val user = userRepository.save(User(...))
+    return issueTokenPair(user.id)
+}
+```
+
+예외: `@CurrentUser`처럼 presentation이 인증된 사용자 정보를 얻기 위해 리졸버로 엔티티를 직접 조회하는 패턴은 이 규칙
+밖에 있다(모든 도메인이 공유하는 기존 패턴이라 이번 정리 범위에 포함하지 않음).
 
 ---
 
