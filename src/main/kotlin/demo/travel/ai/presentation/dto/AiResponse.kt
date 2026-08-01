@@ -3,14 +3,8 @@ package demo.travel.ai.presentation.dto
 import demo.travel.block.dto.BlockResponse
 import demo.travel.block.BlockType
 
-/**
- * `generate` API 응답. DB에는 아무것도 저장되지 않은 상태이며,
- * [blocks]는 [generationId] 키로 Redis에도 동일하게 임시 저장(TTL 10분)된다.
- *
- * @param generationId 이후 `apply` 요청 시 [AiRequest.ApplyRequest.generationId]로 그대로 넘겨야 함.
- */
+/** `generate` API 응답. DB에는 아무것도 저장되지 않은, AI가 제안한 블록 목록. */
 data class GenerateResponse(
-    val generationId: String,
     val blocks: List<AiBlock>,
 )
 
