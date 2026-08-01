@@ -2,12 +2,10 @@
 
 여러 명이 함께 여행 일정을 실시간으로 편집할 수 있는 협업 여행 플래너 서비스의 백엔드입니다.
 
-## 소개
-
-여행 계획은 보통 여러 사람이 함께 세우지만, 정작 편집은 한 명씩 돌아가며 하거나 메신저로 의견을 취합해 반영하는 경우가 많습니다. 
+여행 계획은 보통 여러 사람이 함께 세우지만, 정작 편집은 한 명씩 돌아가며 하거나 메신저로 의견을 취합해 반영하는 경우가 많습니다.
 이 프로젝트는 하루 단위 "블록"(숙소/식사/카페/장소/이동)으로 일정을 구성하고, 여러 사용자가 동시에 접속해 실시간으로 같은 일정을 편집·조율할 수 있게 하는 것을 목표로 합니다.
 
-### 주요 기능
+## 주요 기능
 
 - **실시간 협업 편집**: WebSocket(STOMP)으로 블록 추가/수정/이동/삭제가 접속 중인 모든 멤버에게 즉시 브로드캐스트됩니다. 접속자 presence(활성 Day 포함)도 함께 공유됩니다.
 - **블록 기반 일정 관리**: Day별로 블록을 자유롭게 드래그 앤 드롭으로 재배치할 수 있으며, `position` 값 기반으로 순서를 관리하고 필요 시 재정규화합니다.
@@ -20,106 +18,30 @@
 
 ## 기술 스택
 
-| 영역 | 기술 |
-|------|------|
-| Language / Framework | Kotlin + Spring Boot 4 |
-| ORM | Spring Data JPA |
-| Security | spring-security-crypto (BCrypt) + JWT (jjwt 0.12.6) |
-| Database | MySQL + Redis |
-| 실시간 | WebSocket + STOMP + SockJS |
-| AI | OpenAI API (`gpt-4o`) |
-| External | Google Places API, Kakao OAuth 2.0, Google OAuth 2.0 |
-| HTTP Client | WebFlux WebClient |
-| Mail | Spring Mail (SMTP) |
+![Kotlin](https://img.shields.io/badge/Kotlin-7F52FF?style=for-the-badge&logo=kotlin&logoColor=white)
+![Spring Boot](https://img.shields.io/badge/Spring%20Boot-6DB33F?style=for-the-badge&logo=springboot&logoColor=white)
+![Gradle](https://img.shields.io/badge/Gradle-02303A?style=for-the-badge&logo=gradle&logoColor=white)
+![MySQL](https://img.shields.io/badge/MySQL-4479A1?style=for-the-badge&logo=mysql&logoColor=white)
+![Redis](https://img.shields.io/badge/Redis-DC382D?style=for-the-badge&logo=redis&logoColor=white)
+![JWT](https://img.shields.io/badge/JWT-000000?style=for-the-badge&logo=jsonwebtokens&logoColor=white)
+![OpenAI](https://img.shields.io/badge/OpenAI-412991?style=for-the-badge&logo=openai&logoColor=white)
+![Google](https://img.shields.io/badge/Google-4285F4?style=for-the-badge&logo=google&logoColor=white)
+![Kakao](https://img.shields.io/badge/Kakao-FFCD00?style=for-the-badge&logo=kakaotalk&logoColor=black)
 
-## 프로젝트 구조
+## 기여자
 
-```
-src/main/kotlin/demo/travel/
-├── TravelApplication.kt
-│
-├── ai/                          # AI 일정 생성
-│   ├── AiController.kt
-│   ├── AiService.kt
-│   ├── GooglePlacesClient.kt    # 장소 좌표 조회
-│   ├── OpenAiClient.kt          # OpenAI API 호출
-│   └── dto/
-│
-├── auth/                        # 인증
-│   ├── AuthController.kt
-│   ├── AuthService.kt           # 회원가입, 로그인, Kakao/Google OAuth
-│   ├── CurrentUser.kt           # @CurrentUser 어노테이션
-│   ├── CurrentUserArgumentResolver.kt  # User 주입
-│   ├── GoogleOAuthClient.kt     # 구글 API 호출
-│   ├── GoogleProperties.kt
-│   ├── JwtFilter.kt             # Bearer 토큰 추출 → request attribute
-│   ├── JwtProvider.kt           # JWT 생성/검증
-│   ├── KakaoOAuthClient.kt      # 카카오 API 호출
-│   ├── KakaoProperties.kt
-│   └── PasswordResetService.kt  # 이메일 인증 코드 기반 비밀번호 재설정
-│
-├── block/                       # 블록 도메인 + CRUD + 잠금
-│   ├── BlockController.kt       # WebSocket 이벤트 발행도 담당
-│   ├── BlockRepository.kt
-│   ├── BlockService.kt
-│   ├── ScheduleBlock.kt
-│   └── dto/
-│
-├── budget/                      # 예산 도메인 + CRUD
-│   ├── BudgetController.kt
-│   ├── BudgetItem.kt
-│   ├── BudgetRepository.kt
-│   ├── BudgetService.kt
-│   └── dto/
-│
-├── common/exception/
-│   ├── BusinessException.kt
-│   ├── GlobalExceptionHandler.kt
-│   └── VersionConflictException.kt
-│
-├── config/
-│   ├── WebConfig.kt             # ArgumentResolver 등록
-│   └── WebSocketConfig.kt       # STOMP + SockJS 설정
-│
-├── invite/                      # 초대 링크
-│   ├── InviteController.kt
-│   ├── InviteService.kt
-│   └── dto/
-│
-├── member/                      # 멤버 관리
-│   ├── MemberController.kt
-│   ├── MemberService.kt
-│   └── dto/
-│
-├── trip/                        # 여행 도메인 + CRUD
-│   ├── Trip.kt
-│   ├── TripController.kt
-│   ├── TripMember.kt
-│   ├── TripRepository.kt        # TripRepository + TripMemberRepository
-│   ├── TripService.kt
-│   └── dto/
-│
-├── user/                        # 유저 도메인
-│   ├── User.kt
-│   └── UserRepository.kt
-│
-└── websocket/                   # 실시간 협업
-    ├── PresenceController.kt    # presence 수신 → 브로드캐스트
-    ├── PresenceStore.kt         # 접속자 in-memory 관리
-    ├── TripEvent.kt             # 이벤트 타입 정의
-    └── TripEventPublisher.kt    # /topic/trip.{tripId} 브로드캐스트
-```
+<table>
+  <tr>
+    <td align="center">
+      <a href="https://github.com/BaeJunH0">
+        <img src="https://github.com/BaeJunH0.png" width="100" alt="BaeJunH0"/><br />
+        <sub><b>BaeJunH0</b></sub>
+      </a>
+    </td>
+  </tr>
+</table>
 
-## 문서
-
-| 문서 | 내용 |
-|------|------|
-| [docs/spec-api.md](docs/spec-api.md) | REST/WebSocket API 명세 |
-| [docs/spec-db.md](docs/spec-db.md) | DB 테이블 스키마 |
-| [docs/spec-prompt.md](docs/spec-prompt.md) | AI 일정 생성 프롬프트 명세 |
-| [docs/spec-test.md](docs/spec-test.md) | 테스트 전략 및 명세 |
-
-## 로컬 실행
+## 실행 방법
 
 ```bash
 # MySQL, Redis 실행 후
@@ -127,3 +49,7 @@ src/main/kotlin/demo/travel/
 ```
 
 DB 테이블은 `src/main/resources/schema.sql` 참고.
+
+## 문서
+
+API/DB/AI 프롬프트/테스트 문서는 [docs/](docs/) 디렉터리를 참고하세요.
