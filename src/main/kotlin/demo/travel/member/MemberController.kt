@@ -1,6 +1,6 @@
 package demo.travel.member
 
-import demo.travel.auth.CurrentUser
+import demo.travel.auth.resolver.CurrentUser
 import demo.travel.user.User
 import demo.travel.member.dto.UpdateRoleRequest
 import org.springframework.http.HttpStatus

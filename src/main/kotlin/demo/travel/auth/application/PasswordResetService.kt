@@ -1,11 +1,11 @@
-package demo.travel.auth
+package demo.travel.auth.application
 
-import demo.travel.auth.dto.PasswordResetRequest
+import demo.travel.auth.presentation.dto.PasswordResetRequest
 import demo.travel.common.exception.BusinessException
 import demo.travel.user.AuthProvider
 import demo.travel.user.UserRepository
-import org.springframework.data.redis.core.StringRedisTemplate
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.data.redis.core.StringRedisTemplate
 import org.springframework.mail.SimpleMailMessage
 import org.springframework.mail.javamail.JavaMailSender
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder

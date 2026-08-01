@@ -1,4 +1,4 @@
-package demo.travel.auth.dto
+package demo.travel.auth.presentation.dto
 
 import jakarta.validation.constraints.Email
 import jakarta.validation.constraints.NotBlank

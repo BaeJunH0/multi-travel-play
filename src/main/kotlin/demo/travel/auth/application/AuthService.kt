@@ -1,7 +1,9 @@
-package demo.travel.auth
+package demo.travel.auth.application
 
-import demo.travel.auth.dto.AuthRequest
-import demo.travel.auth.dto.TokenPair
+import demo.travel.auth.client.GoogleOAuthClient
+import demo.travel.auth.client.KakaoOAuthClient
+import demo.travel.auth.presentation.dto.AuthRequest
+import demo.travel.auth.application.dto.TokenPair
 import demo.travel.user.AuthProvider
 import demo.travel.user.User
 import demo.travel.user.UserRepository
@@ -11,7 +13,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import org.springframework.web.server.ResponseStatusException
-import java.util.*
+import java.util.UUID
 import java.util.concurrent.TimeUnit
 
 @Service

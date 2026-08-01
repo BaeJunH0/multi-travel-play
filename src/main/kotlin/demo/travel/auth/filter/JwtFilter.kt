@@ -1,5 +1,6 @@
-package demo.travel.auth
+package demo.travel.auth.filter
 
+import demo.travel.auth.application.JwtProvider
 import jakarta.servlet.FilterChain
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse

@@ -1,7 +1,11 @@
 package demo.travel.auth
 
-import demo.travel.auth.dto.AuthRequest
-import demo.travel.auth.dto.TokenPair
+import demo.travel.auth.application.AuthService
+import demo.travel.auth.application.JwtProvider
+import demo.travel.auth.client.GoogleOAuthClient
+import demo.travel.auth.client.KakaoOAuthClient
+import demo.travel.auth.client.dto.KakaoUserInfo
+import demo.travel.auth.presentation.dto.AuthRequest
 import demo.travel.user.AuthProvider
 import demo.travel.user.User
 import demo.travel.user.UserRepository
