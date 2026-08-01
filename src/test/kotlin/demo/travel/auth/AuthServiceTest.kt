@@ -1,7 +1,11 @@
 package demo.travel.auth
 
-import demo.travel.auth.dto.AuthRequest
-import demo.travel.auth.dto.TokenPair
+import demo.travel.auth.application.AuthService
+import demo.travel.auth.application.JwtProvider
+import demo.travel.auth.client.GoogleOAuthClient
+import demo.travel.auth.client.KakaoOAuthClient
+import demo.travel.auth.client.dto.KakaoUserInfo
+import demo.travel.auth.application.dto.AuthCommand
 import demo.travel.user.AuthProvider
 import demo.travel.user.User
 import demo.travel.user.UserRepository
@@ -42,15 +46,15 @@ class AuthServiceTest : BehaviorSpec({
     }
 
     given("signup") {
-        val request = AuthRequest.Signup("new@test.com", "password123", "홍길동")
+        val command = AuthCommand.Signup("new@test.com", "password123", "홍길동")
 
         `when`("이메일이 중복되지 않을 때") {
             then("유저를 저장하고 TokenPair를 반환한다") {
-                val savedUser = User(id = userId, email = request.email, nickname = request.nickname, provider = AuthProvider.LOCAL)
-                every { userRepository.existsByEmail(request.email) } returns false
+                val savedUser = User(id = userId, email = command.email, nickname = command.nickname, provider = AuthProvider.LOCAL)
+                every { userRepository.existsByEmail(command.email) } returns false
                 every { userRepository.save(any()) } returns savedUser
 
-                val result = service.signup(request)
+                val result = service.signup(command)
 
                 result.accessToken shouldBe accessToken
                 result.refreshToken shouldBe refreshToken
@@ -60,9 +64,9 @@ class AuthServiceTest : BehaviorSpec({
 
         `when`("이메일이 이미 사용 중일 때") {
             then("409 CONFLICT를 던진다") {
-                every { userRepository.existsByEmail(request.email) } returns true
+                every { userRepository.existsByEmail(command.email) } returns true
 
-                val ex = shouldThrow<ResponseStatusException> { service.signup(request) }
+                val ex = shouldThrow<ResponseStatusException> { service.signup(command) }
                 ex.statusCode shouldBe HttpStatus.CONFLICT
                 verify(exactly = 0) { userRepository.save(any()) }
             }
@@ -75,10 +79,10 @@ class AuthServiceTest : BehaviorSpec({
 
         `when`("이메일과 비밀번호가 올바를 때") {
             then("TokenPair를 반환한다") {
-                val request = AuthRequest.Login("user@test.com", "correct123")
-                every { userRepository.findByEmail(request.email) } returns localUser
+                val command = AuthCommand.Login("user@test.com", "correct123")
+                every { userRepository.findByEmail(command.email) } returns localUser
 
-                val result = service.login(request)
+                val result = service.login(command)
 
                 result.accessToken shouldBe accessToken
                 result.refreshToken shouldBe refreshToken
@@ -87,20 +91,20 @@ class AuthServiceTest : BehaviorSpec({
 
         `when`("이메일이 존재하지 않을 때") {
             then("401 UNAUTHORIZED를 던진다") {
-                val request = AuthRequest.Login("none@test.com", "password123")
-                every { userRepository.findByEmail(request.email) } returns null
+                val command = AuthCommand.Login("none@test.com", "password123")
+                every { userRepository.findByEmail(command.email) } returns null
 
-                val ex = shouldThrow<ResponseStatusException> { service.login(request) }
+                val ex = shouldThrow<ResponseStatusException> { service.login(command) }
                 ex.statusCode shouldBe HttpStatus.UNAUTHORIZED
             }
         }
 
         `when`("비밀번호가 틀렸을 때") {
             then("401 UNAUTHORIZED를 던진다") {
-                val request = AuthRequest.Login("user@test.com", "wrong123")
-                every { userRepository.findByEmail(request.email) } returns localUser
+                val command = AuthCommand.Login("user@test.com", "wrong123")
+                every { userRepository.findByEmail(command.email) } returns localUser
 
-                val ex = shouldThrow<ResponseStatusException> { service.login(request) }
+                val ex = shouldThrow<ResponseStatusException> { service.login(command) }
                 ex.statusCode shouldBe HttpStatus.UNAUTHORIZED
             }
         }
@@ -108,10 +112,10 @@ class AuthServiceTest : BehaviorSpec({
         `when`("소셜 로그인 계정 (password = null)일 때") {
             then("401 UNAUTHORIZED를 던진다") {
                 val socialUser = User(id = userId, email = "kakao@kakao.local", nickname = "카카오유저", provider = AuthProvider.KAKAO)
-                val request = AuthRequest.Login("kakao@kakao.local", "anything")
-                every { userRepository.findByEmail(request.email) } returns socialUser
+                val command = AuthCommand.Login("kakao@kakao.local", "anything")
+                every { userRepository.findByEmail(command.email) } returns socialUser
 
-                val ex = shouldThrow<ResponseStatusException> { service.login(request) }
+                val ex = shouldThrow<ResponseStatusException> { service.login(command) }
                 ex.statusCode shouldBe HttpStatus.UNAUTHORIZED
             }
         }

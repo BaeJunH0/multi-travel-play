@@ -1,4 +1,4 @@
-package demo.travel.auth
+package demo.travel.auth.resolver
 
 @Target(AnnotationTarget.VALUE_PARAMETER)
 @Retention(AnnotationRetention.RUNTIME)

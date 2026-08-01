@@ -1,9 +1,9 @@
-package demo.travel.auth
+package demo.travel.auth.client
 
 import org.springframework.boot.context.properties.ConfigurationProperties
 
-@ConfigurationProperties(prefix = "spring.oauth2.kakao")
-data class KakaoProperties(
+@ConfigurationProperties(prefix = "spring.oauth2.google")
+data class GoogleProperties(
     val clientId: String,
     val clientSecret: String,
     val redirectUri: String,

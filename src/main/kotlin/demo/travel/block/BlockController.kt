@@ -1,6 +1,6 @@
 package demo.travel.block
 
-import demo.travel.auth.CurrentUser
+import demo.travel.auth.resolver.CurrentUser
 import demo.travel.block.dto.BlockRequest
 import demo.travel.user.User
 import demo.travel.websocket.TripEvent

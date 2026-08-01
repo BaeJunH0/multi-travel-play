@@ -1,6 +1,6 @@
 package demo.travel.invite
 
-import demo.travel.auth.CurrentUser
+import demo.travel.auth.resolver.CurrentUser
 import demo.travel.config.FrontendProperties
 import demo.travel.user.User
 import org.springframework.http.HttpStatus

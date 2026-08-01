@@ -1,5 +1,6 @@
-package demo.travel.auth
+package demo.travel.auth.client
 
+import demo.travel.auth.client.dto.KakaoUserInfo
 import org.springframework.http.MediaType
 import org.springframework.http.client.JdkClientHttpRequestFactory
 import org.springframework.stereotype.Component
@@ -81,9 +82,3 @@ class KakaoOAuthClient(private val props: KakaoProperties) {
         ).apply { setReadTimeout(Duration.ofSeconds(10)) }
     }
 }
-
-data class KakaoUserInfo(
-    val id: String,
-    val email: String?,
-    val nickname: String,
-)

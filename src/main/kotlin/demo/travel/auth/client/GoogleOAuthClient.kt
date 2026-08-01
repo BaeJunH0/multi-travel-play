@@ -1,5 +1,6 @@
-package demo.travel.auth
+package demo.travel.auth.client
 
+import demo.travel.auth.client.dto.GoogleUserInfo
 import org.springframework.http.MediaType
 import org.springframework.http.client.JdkClientHttpRequestFactory
 import org.springframework.stereotype.Component
@@ -76,9 +77,3 @@ class GoogleOAuthClient(private val props: GoogleProperties) {
         ).apply { setReadTimeout(Duration.ofSeconds(10)) }
     }
 }
-
-data class GoogleUserInfo(
-    val sub: String,
-    val email: String?,
-    val name: String,
-)

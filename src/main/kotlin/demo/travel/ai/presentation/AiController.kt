@@ -2,7 +2,7 @@ package demo.travel.ai.presentation
 
 import demo.travel.ai.application.AiService
 import demo.travel.ai.presentation.dto.AiRequest
-import demo.travel.auth.CurrentUser
+import demo.travel.auth.resolver.CurrentUser
 import demo.travel.user.User
 import jakarta.validation.Valid
 import org.springframework.web.bind.annotation.PathVariable

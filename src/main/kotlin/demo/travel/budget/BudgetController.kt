@@ -1,6 +1,6 @@
 package demo.travel.budget
 
-import demo.travel.auth.CurrentUser
+import demo.travel.auth.resolver.CurrentUser
 import demo.travel.budget.dto.CreateBudgetRequest
 import demo.travel.budget.dto.UpdateBudgetRequest
 import demo.travel.user.User

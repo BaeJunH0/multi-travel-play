@@ -1,11 +1,12 @@
-package demo.travel.auth
+package demo.travel.auth.application
 
 import io.jsonwebtoken.JwtException
 import io.jsonwebtoken.Jwts
 import io.jsonwebtoken.security.Keys
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
-import java.util.*
+import java.util.Date
+import java.util.UUID
 
 @Component
 class JwtProvider(
