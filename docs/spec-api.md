@@ -481,7 +481,6 @@ POST /api/trips/{tripId}/ai/generate
 **응답**
 ```json
 {
-  "generationId": "uuid",
   "blocks": [
     {
       "tempId": "temp-1",
@@ -496,7 +495,7 @@ POST /api/trips/{tripId}/ai/generate
   ]
 }
 ```
-- 생성 결과는 Redis에 10분간 보관
+- 서버는 생성 결과를 저장하지 않음 (stateless) — 프론트가 들고 있다가 `apply`에 그대로 실어 보냄
 - 최소 권한: EDITOR
 
 ### AI 일정 적용
@@ -506,10 +505,18 @@ POST /api/trips/{tripId}/ai/apply
 **요청**
 ```json
 {
-  "generationId": "uuid",
   "selectedBlocks": [
-    { "tempId": "temp-1", "dayNumber": 1, "position": 2.0 },
-    { "tempId": "temp-2", "dayNumber": 2, "position": 1.0 }
+    {
+      "tempId": "temp-1",
+      "blockType": "FOOD",
+      "placeName": "string",
+      "startTime": "HH:mm | null",
+      "durationMin": "number | null",
+      "cost": "number | null",
+      "memo": "string | null",
+      "dayNumber": 1,
+      "position": 2.0
+    }
   ]
 }
 ```
@@ -524,7 +531,7 @@ POST /api/trips/{tripId}/ai/apply
   ]
 }
 ```
-- `generationId` 만료(10분) 시 `404 NOT_FOUND`
+- `selectedBlocks`의 내용을 서버가 그대로 저장 (재검증 없음)
 - Google Places API로 `lat/lng` 자동 보강 (실패 시 null 허용)
 - 최소 권한: EDITOR
 

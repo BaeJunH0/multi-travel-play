@@ -20,25 +20,30 @@ object AiRequest {
 
     /**
      * `generate` 응답으로 받은 블록 중 사용자가 선택한 항목을 실제 DB에 저장 요청.
-     *
-     * @param generationId `generate` 응답의 [GenerateResponse.generationId]. 서버가 이 값으로
-     *   Redis에 임시 저장된 AI 생성 결과(TTL 10분)를 찾아 [SelectedBlock]과 병합한다.
+     * 서버는 별도로 원본 상태를 들고 있지 않으므로(stateless), 저장할 블록의 내용을
+     * [SelectedBlock]에 그대로 담아 보낸다.
      */
     data class ApplyRequest(
-        val generationId: String,
         val selectedBlocks: List<SelectedBlock>,
     )
 
     /**
-     * 사용자가 채택한 AI 블록 1건. 블록의 실제 내용(placeName, cost 등)은 담지 않고,
-     * 원본 [AiBlock]을 가리키는 참조([tempId])와 사용자가 정한 배치 정보만 전달한다.
+     * 사용자가 채택한 AI 블록 1건. [AiBlock]의 내용과 사용자가 정한 배치 정보를
+     * 함께 담아 서버에 그대로 저장 요청한다.
      *
-     * @param tempId 원본 [AiBlock.tempId]. 서버는 이 값으로 Redis에 저장된 AI 블록을 찾아온다.
+     * @param tempId 원본 [AiBlock.tempId]. 서버는 저장 결과([AppliedBlock])를 응답할 때
+     *   그대로 echo하여, 프론트가 어떤 AI 제안이 어떤 저장 결과로 이어졌는지 매칭하게 한다.
      * @param dayNumber 사용자가 최종적으로 배치한 Day (AI의 [AiBlock.suggestedDay]와 다를 수 있음).
      * @param position 같은 Day 내에서의 정렬 순서.
      */
     data class SelectedBlock(
         val tempId: String,
+        val blockType: BlockType,
+        val placeName: String,
+        val startTime: String?,
+        val durationMin: Int?,
+        val cost: Int?,
+        val memo: String?,
         val dayNumber: Int,
         val position: Double,
     )

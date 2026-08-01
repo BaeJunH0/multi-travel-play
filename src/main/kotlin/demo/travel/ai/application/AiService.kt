@@ -2,7 +2,6 @@ package demo.travel.ai.application
 
 import demo.travel.ai.client.GooglePlacesClient
 import demo.travel.ai.client.OpenAiClient
-import demo.travel.ai.presentation.dto.AiBlock
 import demo.travel.ai.presentation.dto.AiRequest
 import demo.travel.ai.presentation.dto.AppliedBlock
 import demo.travel.ai.presentation.dto.ApplyResponse
@@ -14,18 +13,14 @@ import demo.travel.trip.TripMemberRepository
 import demo.travel.trip.TripRepository
 import demo.travel.trip.TripRole
 import demo.travel.user.User
-import org.springframework.data.redis.core.StringRedisTemplate
 import org.springframework.data.repository.findByIdOrNull
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import org.springframework.web.server.ResponseStatusException
-import tools.jackson.databind.ObjectMapper
-import tools.jackson.module.kotlin.readValue
 import java.time.LocalTime
 import java.time.temporal.ChronoUnit
 import java.util.UUID
-import java.util.concurrent.TimeUnit
 
 @Service
 class AiService(
@@ -34,8 +29,6 @@ class AiService(
     private val tripRepository: TripRepository,
     private val tripMemberRepository: TripMemberRepository,
     private val blockRepository: BlockRepository,
-    private val redisTemplate: StringRedisTemplate,
-    private val objectMapper: ObjectMapper,
 ) {
     fun generate(tripId: UUID, request: AiRequest.GenerateRequest, userId: UUID): GenerateResponse {
         requireEditorOrAbove(tripId, userId)
@@ -46,54 +39,37 @@ class AiService(
         val prompt = buildPrompt(trip.destination, trip.startDate.toString(), trip.endDate.toString(), totalDays, request)
 
         val blocks = openAiClient.generate(prompt)
-        val generationId = UUID.randomUUID().toString()
-
-        redisTemplate.opsForValue().set(
-            redisKey(generationId),
-            objectMapper.writeValueAsString(blocks),
-            10, TimeUnit.MINUTES,
-        )
-
-        return GenerateResponse(generationId, blocks)
+        return GenerateResponse(blocks)
     }
 
     @Transactional
     fun apply(tripId: UUID, request: AiRequest.ApplyRequest, user: User): ApplyResponse {
         requireEditorOrAbove(tripId, user.id)
 
-        val json = redisTemplate.opsForValue().get(redisKey(request.generationId))
-            ?: throw ResponseStatusException(HttpStatus.NOT_FOUND, "생성 결과가 만료되었습니다.")
-
         val trip = tripRepository.findByIdOrNull(tripId)
             ?: throw ResponseStatusException(HttpStatus.NOT_FOUND)
-        val allBlocks: List<AiBlock> = objectMapper.readValue(json)
-        val blockMap = allBlocks.associateBy { it.tempId }
 
         val added = request.selectedBlocks.map { selected ->
-            val aiBlock = blockMap[selected.tempId]
-                ?: throw ResponseStatusException(HttpStatus.BAD_REQUEST, "tempId ${selected.tempId} 없음")
-
-            val latLng = placesClient.findLatLng(aiBlock.placeName)
+            val latLng = placesClient.findLatLng(selected.placeName)
             val saved = blockRepository.save(
                 ScheduleBlock(
                     trip = trip,
                     dayNumber = selected.dayNumber,
                     position = selected.position,
-                    blockType = aiBlock.blockType,
-                    placeName = aiBlock.placeName,
+                    blockType = selected.blockType,
+                    placeName = selected.placeName,
                     lat = latLng?.first,
                     lng = latLng?.second,
-                    startTime = aiBlock.startTime?.let { LocalTime.parse(it) },
-                    durationMin = aiBlock.durationMin,
-                    cost = aiBlock.cost,
-                    memo = aiBlock.memo,
+                    startTime = selected.startTime?.let { LocalTime.parse(it) },
+                    durationMin = selected.durationMin,
+                    cost = selected.cost,
+                    memo = selected.memo,
                     createdBy = user,
                 )
             )
             AppliedBlock(tempId = selected.tempId, block = BlockResponse.of(saved))
         }
 
-        redisTemplate.delete(redisKey(request.generationId))
         return ApplyResponse(added)
     }
 
@@ -102,8 +78,6 @@ class AiService(
             ?: throw ResponseStatusException(HttpStatus.FORBIDDEN)
         if (member.role == TripRole.VIEWER) throw ResponseStatusException(HttpStatus.FORBIDDEN)
     }
-
-    private fun redisKey(generationId: String) = "ai:generation:$generationId"
 
     private fun buildPrompt(
         destination: String,
