@@ -1,8 +1,9 @@
-package demo.travel.member
+package demo.travel.member.application
 
+import demo.travel.member.application.dto.MemberCommand
+import demo.travel.member.application.dto.MemberResult
 import demo.travel.trip.TripMemberRepository
 import demo.travel.trip.TripRole
-import demo.travel.member.dto.MemberResponse
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -14,23 +15,23 @@ import java.util.UUID
 class MemberService(private val tripMemberRepository: TripMemberRepository) {
 
     @Transactional(readOnly = true)
-    fun getMembers(tripId: UUID, requesterId: UUID): List<MemberResponse> {
+    fun getMembers(tripId: UUID, requesterId: UUID): List<MemberResult> {
         tripMemberRepository.findByTripIdAndUserId(tripId, requesterId)
             ?: throw ResponseStatusException(HttpStatus.FORBIDDEN)
-        return tripMemberRepository.findAllByTripId(tripId).map { MemberResponse.of(it) }
+        return tripMemberRepository.findAllByTripId(tripId).map { MemberResult.of(it) }
     }
 
-    fun updateRole(tripId: UUID, targetUserId: UUID, newRole: TripRole, requesterId: UUID) {
-        val requester = tripMemberRepository.findByTripIdAndUserId(tripId, requesterId)
+    fun updateRole(command: MemberCommand.UpdateRole) {
+        val requester = tripMemberRepository.findByTripIdAndUserId(command.tripId, command.requesterId)
             ?: throw ResponseStatusException(HttpStatus.FORBIDDEN)
         if (requester.role != TripRole.OWNER) throw ResponseStatusException(HttpStatus.FORBIDDEN)
-        if (newRole == TripRole.OWNER) throw ResponseStatusException(HttpStatus.BAD_REQUEST, "OWNER 권한은 직접 양도할 수 없습니다.")
+        if (command.role == TripRole.OWNER) throw ResponseStatusException(HttpStatus.BAD_REQUEST, "OWNER 권한은 직접 양도할 수 없습니다.")
 
-        val target = tripMemberRepository.findByTripIdAndUserId(tripId, targetUserId)
+        val target = tripMemberRepository.findByTripIdAndUserId(command.tripId, command.targetUserId)
             ?: throw ResponseStatusException(HttpStatus.NOT_FOUND)
         if (target.role == TripRole.OWNER) throw ResponseStatusException(HttpStatus.FORBIDDEN, "OWNER 역할은 변경할 수 없습니다.")
 
-        target.role = newRole
+        target.role = command.role
     }
 
     fun removeMember(tripId: UUID, targetUserId: UUID, requesterId: UUID) {
