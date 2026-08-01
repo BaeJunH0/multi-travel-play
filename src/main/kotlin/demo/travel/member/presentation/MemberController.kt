@@ -1,8 +1,11 @@
-package demo.travel.member
+package demo.travel.member.presentation
 
 import demo.travel.auth.resolver.CurrentUser
+import demo.travel.member.application.MemberService
+import demo.travel.member.application.dto.MemberCommand
+import demo.travel.member.presentation.dto.MemberRequest
+import demo.travel.member.presentation.dto.MemberResponse
 import demo.travel.user.User
-import demo.travel.member.dto.UpdateRoleRequest
 import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.*
 import java.util.UUID
@@ -12,16 +15,18 @@ import java.util.UUID
 class MemberController(private val memberService: MemberService) {
 
     @GetMapping
-    fun getMembers(@CurrentUser user: User, @PathVariable tripId: UUID) =
-        memberService.getMembers(tripId, user.id)
+    fun getMembers(@CurrentUser user: User, @PathVariable tripId: UUID): List<MemberResponse> =
+        memberService.getMembers(tripId, user.id).map { MemberResponse.of(it) }
 
     @PatchMapping("/{userId}")
     fun updateRole(
         @CurrentUser user: User,
         @PathVariable tripId: UUID,
         @PathVariable userId: UUID,
-        @RequestBody request: UpdateRoleRequest,
-    ) = memberService.updateRole(tripId, userId, request.role, user.id)
+        @RequestBody request: MemberRequest.UpdateRole,
+    ) = memberService.updateRole(
+        MemberCommand.UpdateRole(tripId = tripId, targetUserId = userId, role = request.role, requesterId = user.id)
+    )
 
     @DeleteMapping("/{userId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)

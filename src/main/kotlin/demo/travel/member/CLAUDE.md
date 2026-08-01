@@ -46,4 +46,4 @@
 ## 응답 DTO
 
 `MemberResponse` — `userId`, `nickname`, `role` 세 필드만 반환.  
-`avatarColor`는 스펙 문서에 명시되어 있으나 **현재 구현에서는 포함되지 않는다** (`TripMember` → `User`에서 매핑되지 않음). 추가 시 `MemberResponse.of()` 와 `TripMember` 엔티티를 함께 수정해야 한다.
+`avatarColor`는 스펙 문서에 명시되어 있으나 **현재 구현에서는 포함되지 않는다** (`TripMember` → `User`에서 매핑되지 않음). 추가 시 `MemberResult.of()`(엔티티 → Result 변환)와 `TripMember` 엔티티를 함께 수정해야 한다.

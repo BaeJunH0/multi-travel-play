@@ -1,5 +1,7 @@
 package demo.travel.member
 
+import demo.travel.member.application.MemberService
+import demo.travel.member.application.dto.MemberCommand
 import demo.travel.trip.Trip
 import demo.travel.trip.TripMember
 import demo.travel.trip.TripMemberRepository
@@ -69,7 +71,7 @@ class MemberServiceTest : BehaviorSpec({
                 every { tripMemberRepository.findByTripIdAndUserId(tripId, ownerId) } returns ownerMember
                 every { tripMemberRepository.findByTripIdAndUserId(tripId, editorId) } returns editorMember
 
-                service.updateRole(tripId, editorId, TripRole.VIEWER, ownerId)
+                service.updateRole(MemberCommand.UpdateRole(tripId, editorId, TripRole.VIEWER, ownerId))
 
                 editorMember.role shouldBe TripRole.VIEWER
             }
@@ -80,7 +82,7 @@ class MemberServiceTest : BehaviorSpec({
                 every { tripMemberRepository.findByTripIdAndUserId(tripId, ownerId) } returns ownerMember
                 every { tripMemberRepository.findByTripIdAndUserId(tripId, viewerId) } returns viewerMember
 
-                service.updateRole(tripId, viewerId, TripRole.EDITOR, ownerId)
+                service.updateRole(MemberCommand.UpdateRole(tripId, viewerId, TripRole.EDITOR, ownerId))
 
                 viewerMember.role shouldBe TripRole.EDITOR
             }
@@ -91,7 +93,7 @@ class MemberServiceTest : BehaviorSpec({
                 every { tripMemberRepository.findByTripIdAndUserId(tripId, editorId) } returns editorMember
 
                 val ex = shouldThrow<ResponseStatusException> {
-                    service.updateRole(tripId, viewerId, TripRole.EDITOR, editorId)
+                    service.updateRole(MemberCommand.UpdateRole(tripId, viewerId, TripRole.EDITOR, editorId))
                 }
                 ex.statusCode shouldBe HttpStatus.FORBIDDEN
             }
@@ -102,7 +104,7 @@ class MemberServiceTest : BehaviorSpec({
                 every { tripMemberRepository.findByTripIdAndUserId(tripId, ownerId) } returns ownerMember
 
                 val ex = shouldThrow<ResponseStatusException> {
-                    service.updateRole(tripId, ownerId, TripRole.EDITOR, ownerId)
+                    service.updateRole(MemberCommand.UpdateRole(tripId, ownerId, TripRole.EDITOR, ownerId))
                 }
                 ex.statusCode shouldBe HttpStatus.FORBIDDEN
             }
@@ -113,7 +115,7 @@ class MemberServiceTest : BehaviorSpec({
                 every { tripMemberRepository.findByTripIdAndUserId(tripId, ownerId) } returns ownerMember
 
                 val ex = shouldThrow<ResponseStatusException> {
-                    service.updateRole(tripId, editorId, TripRole.OWNER, ownerId)
+                    service.updateRole(MemberCommand.UpdateRole(tripId, editorId, TripRole.OWNER, ownerId))
                 }
                 ex.statusCode shouldBe HttpStatus.BAD_REQUEST
             }
@@ -125,7 +127,7 @@ class MemberServiceTest : BehaviorSpec({
                 every { tripMemberRepository.findByTripIdAndUserId(tripId, outsiderId) } returns null
 
                 val ex = shouldThrow<ResponseStatusException> {
-                    service.updateRole(tripId, editorId, TripRole.VIEWER, outsiderId)
+                    service.updateRole(MemberCommand.UpdateRole(tripId, editorId, TripRole.VIEWER, outsiderId))
                 }
                 ex.statusCode shouldBe HttpStatus.FORBIDDEN
             }
