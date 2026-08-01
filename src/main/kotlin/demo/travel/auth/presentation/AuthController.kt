@@ -1,6 +1,8 @@
 package demo.travel.auth.presentation
 
 import demo.travel.auth.application.AuthService
+import demo.travel.auth.application.dto.AuthCommand
+import demo.travel.auth.application.dto.PasswordResetCommand
 import demo.travel.auth.resolver.CurrentUser
 import demo.travel.auth.client.GoogleOAuthClient
 import demo.travel.auth.client.KakaoOAuthClient
@@ -40,7 +42,7 @@ class AuthController(
         @Valid @RequestBody request: AuthRequest.Signup,
         response: HttpServletResponse,
     ): TokenResponse {
-        val pair = authService.signup(request)
+        val pair = authService.signup(AuthCommand.Signup(request.email, request.password, request.nickname))
         setRefreshCookie(response, pair.refreshToken)
         return TokenResponse(pair.accessToken)
     }
@@ -50,7 +52,7 @@ class AuthController(
         @Valid @RequestBody request: AuthRequest.Login,
         response: HttpServletResponse,
     ): TokenResponse {
-        val pair = authService.login(request)
+        val pair = authService.login(AuthCommand.Login(request.email, request.password))
         setRefreshCookie(response, pair.refreshToken)
         return TokenResponse(pair.accessToken)
     }
@@ -125,7 +127,9 @@ class AuthController(
     fun confirmPasswordReset(
         @Valid @RequestBody request: PasswordResetRequest.Confirm,
     ): TokenResponse {
-        val accessToken = passwordResetService.confirmReset(request)
+        val accessToken = passwordResetService.confirmReset(
+            PasswordResetCommand.Confirm(request.email, request.token, request.newPassword)
+        )
         return TokenResponse(accessToken)
     }
 

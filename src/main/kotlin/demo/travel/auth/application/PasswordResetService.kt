@@ -1,6 +1,6 @@
 package demo.travel.auth.application
 
-import demo.travel.auth.presentation.dto.PasswordResetRequest
+import demo.travel.auth.application.dto.PasswordResetCommand
 import demo.travel.common.exception.BusinessException
 import demo.travel.user.AuthProvider
 import demo.travel.user.UserRepository
@@ -49,21 +49,21 @@ class PasswordResetService(
     }
 
     @Transactional
-    fun confirmReset(request: PasswordResetRequest.Confirm): String {
-        val user = userRepository.findByEmail(request.email)
+    fun confirmReset(command: PasswordResetCommand.Confirm): String {
+        val user = userRepository.findByEmail(command.email)
             ?: throw BusinessException("USER_NOT_FOUND", "존재하지 않는 이메일입니다.")
 
         if (user.provider != AuthProvider.LOCAL) {
             throw BusinessException("SOCIAL_ACCOUNT", "소셜 로그인 계정은 비밀번호를 변경할 수 없습니다.")
         }
 
-        val stored = redisTemplate.opsForValue().get(resetKey(request.email))
-        if (stored == null || stored != request.token) {
+        val stored = redisTemplate.opsForValue().get(resetKey(command.email))
+        if (stored == null || stored != command.token) {
             throw BusinessException("INVALID_RESET_TOKEN", "인증 코드가 올바르지 않거나 만료됐습니다.")
         }
 
-        user.changePassword(passwordEncoder.encode(request.newPassword)!!)
-        redisTemplate.delete(resetKey(request.email))
+        user.changePassword(passwordEncoder.encode(command.newPassword)!!)
+        redisTemplate.delete(resetKey(command.email))
 
         return jwtProvider.generate(user.id)
     }

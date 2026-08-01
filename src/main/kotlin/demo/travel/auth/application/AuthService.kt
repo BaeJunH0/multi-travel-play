@@ -2,7 +2,7 @@ package demo.travel.auth.application
 
 import demo.travel.auth.client.GoogleOAuthClient
 import demo.travel.auth.client.KakaoOAuthClient
-import demo.travel.auth.presentation.dto.AuthRequest
+import demo.travel.auth.application.dto.AuthCommand
 import demo.travel.auth.application.dto.TokenPair
 import demo.travel.user.AuthProvider
 import demo.travel.user.User
@@ -28,26 +28,26 @@ class AuthService(
     private val passwordEncoder = BCryptPasswordEncoder()
     private val refreshTtlMs = 604_800_000L  // 7일
 
-    fun signup(request: AuthRequest.Signup): TokenPair {
-        if (userRepository.existsByEmail(request.email)) {
+    fun signup(command: AuthCommand.Signup): TokenPair {
+        if (userRepository.existsByEmail(command.email)) {
             throw ResponseStatusException(HttpStatus.CONFLICT, "이미 사용 중인 이메일입니다.")
         }
         val user = userRepository.save(
             User(
-                email = request.email,
-                nickname = request.nickname,
+                email = command.email,
+                nickname = command.nickname,
                 provider = AuthProvider.LOCAL,
-                password = passwordEncoder.encode(request.password),
+                password = passwordEncoder.encode(command.password),
             )
         )
         return issueTokenPair(user.id)
     }
 
     @Transactional(readOnly = true)
-    fun login(request: AuthRequest.Login): TokenPair {
-        val user = userRepository.findByEmail(request.email)
+    fun login(command: AuthCommand.Login): TokenPair {
+        val user = userRepository.findByEmail(command.email)
             ?: throw ResponseStatusException(HttpStatus.UNAUTHORIZED, "이메일 또는 비밀번호가 올바르지 않습니다.")
-        if (user.password == null || !passwordEncoder.matches(request.password, user.password)) {
+        if (user.password == null || !passwordEncoder.matches(command.password, user.password)) {
             throw ResponseStatusException(HttpStatus.UNAUTHORIZED, "이메일 또는 비밀번호가 올바르지 않습니다.")
         }
         return issueTokenPair(user.id)
