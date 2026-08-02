@@ -1,4 +1,4 @@
-package demo.travel.trip.dto
+package demo.travel.trip.presentation.dto
 
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.NotNull

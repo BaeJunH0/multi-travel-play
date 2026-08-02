@@ -1,8 +1,10 @@
 package demo.travel.trip
 
-import demo.travel.trip.dto.TripRequest
+import demo.travel.trip.application.TripService
+import demo.travel.trip.application.dto.TripCommand
 import demo.travel.user.AuthProvider
 import demo.travel.user.User
+import demo.travel.user.UserRepository
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.matchers.collections.shouldHaveSize
@@ -18,7 +20,8 @@ class TripServiceTest : BehaviorSpec({
 
     val tripRepository = mockk<TripRepository>()
     val tripMemberRepository = mockk<TripMemberRepository>()
-    val service = TripService(tripRepository, tripMemberRepository)
+    val userRepository = mockk<UserRepository>()
+    val service = TripService(tripRepository, tripMemberRepository, userRepository)
 
     val userId = UUID.randomUUID()
     val tripId = UUID.randomUUID()
@@ -34,15 +37,16 @@ class TripServiceTest : BehaviorSpec({
     beforeEach { clearAllMocks() }
 
     given("create") {
-        val request = TripRequest.Create("제주도 여행", "제주도", LocalDate.of(2026, 8, 1), LocalDate.of(2026, 8, 3))
+        val command = TripCommand.Create("제주도 여행", "제주도", LocalDate.of(2026, 8, 1), LocalDate.of(2026, 8, 3), userId)
 
         `when`("정상 요청일 때") {
             then("여행을 저장하고 OWNER TripMember를 등록한다") {
+                every { userRepository.getReferenceById(userId) } returns user
                 every { tripRepository.save(any()) } returns trip
                 every { tripMemberRepository.save(any()) } returns memberWith(TripRole.OWNER)
                 every { tripMemberRepository.countByTripId(tripId) } returns 1
 
-                val result = service.create(request, user)
+                val result = service.create(command)
 
                 result.id shouldBe tripId
                 result.myRole shouldBe TripRole.OWNER
@@ -115,7 +119,7 @@ class TripServiceTest : BehaviorSpec({
     }
 
     given("update") {
-        val request = TripRequest.Update(title = "수정된 제목", destination = null, startDate = null, endDate = null)
+        val command = TripCommand.Update(tripId = tripId, title = "수정된 제목", destination = null, startDate = null, endDate = null, userId = userId)
 
         `when`("EDITOR 권한일 때") {
             then("여행 정보를 수정한다") {
@@ -123,7 +127,7 @@ class TripServiceTest : BehaviorSpec({
                 every { tripMemberRepository.findByTripIdAndUserId(tripId, userId) } returns memberWith(TripRole.EDITOR)
                 every { tripMemberRepository.countByTripId(tripId) } returns 2
 
-                val result = service.update(tripId, request, userId)
+                val result = service.update(command)
                 result.title shouldBe "수정된 제목"
             }
         }
@@ -138,7 +142,7 @@ class TripServiceTest : BehaviorSpec({
                 every { tripMemberRepository.findByTripIdAndUserId(tripId, userId) } returns TripMember(trip = freshTrip, user = user, role = TripRole.OWNER)
                 every { tripMemberRepository.countByTripId(tripId) } returns 1
 
-                val result = service.update(tripId, request, userId)
+                val result = service.update(command)
                 result.title shouldBe "수정된 제목"
             }
         }
@@ -148,7 +152,7 @@ class TripServiceTest : BehaviorSpec({
                 every { tripRepository.findByIdOrNull(tripId) } returns trip
                 every { tripMemberRepository.findByTripIdAndUserId(tripId, userId) } returns memberWith(TripRole.VIEWER)
 
-                val ex = shouldThrow<ResponseStatusException> { service.update(tripId, request, userId) }
+                val ex = shouldThrow<ResponseStatusException> { service.update(command) }
                 ex.statusCode shouldBe HttpStatus.FORBIDDEN
             }
         }
@@ -158,7 +162,7 @@ class TripServiceTest : BehaviorSpec({
                 every { tripRepository.findByIdOrNull(tripId) } returns trip
                 every { tripMemberRepository.findByTripIdAndUserId(tripId, userId) } returns null
 
-                val ex = shouldThrow<ResponseStatusException> { service.update(tripId, request, userId) }
+                val ex = shouldThrow<ResponseStatusException> { service.update(command) }
                 ex.statusCode shouldBe HttpStatus.FORBIDDEN
             }
         }
