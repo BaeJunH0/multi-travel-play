@@ -1,7 +1,7 @@
 package demo.travel.common
 
 import demo.travel.block.BlockType
-import demo.travel.block.dto.BlockResponse
+import demo.travel.block.application.dto.BlockResult
 import demo.travel.common.exception.BusinessException
 import demo.travel.common.exception.VersionConflictException
 import io.kotest.core.spec.style.BehaviorSpec
@@ -41,7 +41,7 @@ class ExceptionTest : BehaviorSpec({
     }
 
     given("VersionConflictException") {
-        val blockResponse = BlockResponse(
+        val blockResult = BlockResult(
             id = UUID.randomUUID(),
             dayNumber = 1, position = 1.0,
             blockType = BlockType.PLACE, placeName = "경복궁",
@@ -53,17 +53,17 @@ class ExceptionTest : BehaviorSpec({
 
         `when`("현재 블록 상태와 함께 생성하면") {
             then("메시지가 고정 문자열이고 currentBlock이 포함된다") {
-                val ex = VersionConflictException(blockResponse)
+                val ex = VersionConflictException(blockResult)
 
                 ex.message shouldBe "다른 사용자가 이미 수정했습니다."
-                ex.currentBlock shouldBe blockResponse
+                ex.currentBlock shouldBe blockResult
                 ex.currentBlock.version shouldBe 3L
             }
         }
 
         `when`("RuntimeException을 상속하는지 확인") {
             then("RuntimeException의 인스턴스이다") {
-                val ex = VersionConflictException(blockResponse)
+                val ex = VersionConflictException(blockResult)
 
                 (ex is RuntimeException) shouldBe true
             }

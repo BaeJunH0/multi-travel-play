@@ -1,7 +1,10 @@
-package demo.travel.block
+package demo.travel.block.presentation
 
 import demo.travel.auth.resolver.CurrentUser
-import demo.travel.block.dto.BlockRequest
+import demo.travel.block.application.BlockService
+import demo.travel.block.application.dto.BlockCommand
+import demo.travel.block.presentation.dto.BlockRequest
+import demo.travel.block.presentation.dto.BlockResponse
 import demo.travel.user.User
 import demo.travel.websocket.TripEvent
 import demo.travel.websocket.TripEventPublisher
@@ -17,8 +20,8 @@ class BlockController(
     private val eventPublisher: TripEventPublisher,
 ) {
     @GetMapping
-    fun getBlocks(@CurrentUser user: User, @PathVariable tripId: UUID) =
-        blockService.getBlocks(tripId, user.id)
+    fun getBlocks(@CurrentUser user: User, @PathVariable tripId: UUID): List<BlockResponse> =
+        blockService.getBlocks(tripId, user.id).map { BlockResponse.of(it) }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
@@ -26,9 +29,21 @@ class BlockController(
         @CurrentUser user: User,
         @PathVariable tripId: UUID,
         @Valid @RequestBody request: BlockRequest.Create,
-    ) = blockService.addBlock(tripId, request, user).also {
-        eventPublisher.publish(tripId, TripEvent.add(tripId, it))
-    }
+    ): BlockResponse = BlockResponse.of(
+        blockService.addBlock(
+            BlockCommand.Create(
+                tripId = tripId,
+                dayNumber = request.dayNumber,
+                blockType = request.blockType,
+                placeName = request.placeName,
+                startTime = request.startTime,
+                durationMin = request.durationMin,
+                cost = request.cost,
+                memo = request.memo,
+                userId = user.id,
+            )
+        )
+    ).also { eventPublisher.publish(tripId, TripEvent.add(tripId, it)) }
 
     @PatchMapping("/{blockId}")
     fun updateBlock(
@@ -36,9 +51,21 @@ class BlockController(
         @PathVariable tripId: UUID,
         @PathVariable blockId: UUID,
         @Valid @RequestBody request: BlockRequest.Update,
-    ) = blockService.updateBlock(tripId, blockId, request, user.id).also {
-        eventPublisher.publish(tripId, TripEvent.update(tripId, it))
-    }
+    ): BlockResponse = BlockResponse.of(
+        blockService.updateBlock(
+            BlockCommand.Update(
+                tripId = tripId,
+                blockId = blockId,
+                placeName = request.placeName,
+                startTime = request.startTime,
+                durationMin = request.durationMin,
+                cost = request.cost,
+                memo = request.memo,
+                version = request.version,
+                userId = user.id,
+            )
+        )
+    ).also { eventPublisher.publish(tripId, TripEvent.update(tripId, it)) }
 
     @PatchMapping("/{blockId}/move")
     fun moveBlock(
@@ -46,9 +73,18 @@ class BlockController(
         @PathVariable tripId: UUID,
         @PathVariable blockId: UUID,
         @Valid @RequestBody request: BlockRequest.Move,
-    ) = blockService.moveBlock(tripId, blockId, request, user.id).also {
-        eventPublisher.publish(tripId, TripEvent.move(tripId, it))
-    }
+    ): BlockResponse = BlockResponse.of(
+        blockService.moveBlock(
+            BlockCommand.Move(
+                tripId = tripId,
+                blockId = blockId,
+                dayNumber = request.dayNumber,
+                position = request.position,
+                version = request.version,
+                userId = user.id,
+            )
+        )
+    ).also { eventPublisher.publish(tripId, TripEvent.move(tripId, it)) }
 
     @DeleteMapping("/{blockId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
@@ -67,9 +103,8 @@ class BlockController(
         @CurrentUser user: User,
         @PathVariable tripId: UUID,
         @PathVariable blockId: UUID,
-    ) = blockService.lockBlock(tripId, blockId, user.id).also {
-        eventPublisher.publish(tripId, TripEvent.lock(tripId, it))
-    }
+    ): BlockResponse = BlockResponse.of(blockService.lockBlock(tripId, blockId, user.id))
+        .also { eventPublisher.publish(tripId, TripEvent.lock(tripId, it)) }
 
     @DeleteMapping("/{blockId}/lock")
     @ResponseStatus(HttpStatus.NO_CONTENT)

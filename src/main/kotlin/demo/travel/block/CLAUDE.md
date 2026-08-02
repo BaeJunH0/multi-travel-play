@@ -35,7 +35,7 @@
 `ScheduleBlock.version`은 JPA `@Version` 필드다. `updateBlock`, `moveBlock` 시 요청의 `version`이 현재 엔티티와 다르면 `VersionConflictException`을 던진다. 이 예외는 `409 VERSION_CONFLICT` 응답과 함께 현재 서버 상태의 블록 객체를 반환한다.
 
 ```
-checkVersion(block, request.version)  // version 불일치 → VersionConflictException(현재 BlockResponse)
+checkVersion(block, command.version)  // version 불일치 → VersionConflictException(현재 BlockResult)
 ```
 
 ### 블록 잠금 (Block Lock)

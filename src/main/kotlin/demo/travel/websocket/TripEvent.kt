@@ -1,6 +1,6 @@
 package demo.travel.websocket
 
-import demo.travel.block.dto.BlockResponse
+import demo.travel.block.presentation.dto.BlockResponse
 import java.util.*
 
 data class TripEvent(

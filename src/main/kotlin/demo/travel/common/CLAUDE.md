@@ -7,7 +7,7 @@
 | 클래스 | 용도 |
 |---|---|
 | `BusinessException` | 도메인 규칙 위반 등 일반 비즈니스 오류. `code`, `message`, `status`(기본 400)를 직접 지정. |
-| `VersionConflictException` | 낙관적 잠금 충돌 시 사용. 충돌 시점의 최신 `BlockResponse`를 함께 전달. 메시지는 고정("다른 사용자가 이미 수정했습니다."). |
+| `VersionConflictException` | 낙관적 잠금 충돌 시 사용. 충돌 시점의 최신 `BlockResult`를 함께 전달. 메시지는 고정("다른 사용자가 이미 수정했습니다."). |
 
 ## GlobalExceptionHandler 처리 목록
 

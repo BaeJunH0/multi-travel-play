@@ -1,10 +1,10 @@
-package demo.travel.block.dto
+package demo.travel.block.application.dto
 
 import demo.travel.block.BlockType
 import demo.travel.block.ScheduleBlock
-import java.util.*
+import java.util.UUID
 
-data class BlockResponse(
+data class BlockResult(
     val id: UUID,
     val dayNumber: Int,
     val position: Double,
@@ -21,7 +21,7 @@ data class BlockResponse(
     val version: Long,
 ) {
     companion object {
-        fun of(block: ScheduleBlock) = BlockResponse(
+        fun of(block: ScheduleBlock) = BlockResult(
             id = block.id,
             dayNumber = block.dayNumber,
             position = block.position,
