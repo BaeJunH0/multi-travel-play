@@ -1,7 +1,7 @@
 package demo.travel.budget
 
-import demo.travel.budget.dto.CreateBudgetRequest
-import demo.travel.budget.dto.UpdateBudgetRequest
+import demo.travel.budget.application.BudgetService
+import demo.travel.budget.application.dto.BudgetCommand
 import demo.travel.trip.Trip
 import demo.travel.trip.TripMember
 import demo.travel.trip.TripMemberRepository
@@ -64,7 +64,7 @@ class BudgetServiceTest : BehaviorSpec({
     }
 
     given("create") {
-        val request = CreateBudgetRequest(category = BudgetCategory.HOTEL, amount = 100000, memo = "숙박비")
+        val command = BudgetCommand.Create(tripId = tripId, category = BudgetCategory.HOTEL, amount = 100000, memo = "숙박비", userId = userId)
 
         `when`("EDITOR 권한일 때") {
             then("예산 항목을 저장하고 반환한다") {
@@ -73,7 +73,7 @@ class BudgetServiceTest : BehaviorSpec({
                 every { tripRepository.findByIdOrNull(tripId) } returns trip
                 every { budgetRepository.save(any()) } returns savedItem
 
-                val result = service.create(tripId, request, userId)
+                val result = service.create(command)
                 result.category shouldBe BudgetCategory.HOTEL
                 result.amount shouldBe 100000
             }
@@ -83,7 +83,7 @@ class BudgetServiceTest : BehaviorSpec({
             then("403 FORBIDDEN을 던진다") {
                 every { tripMemberRepository.findByTripIdAndUserId(tripId, userId) } returns memberWith(TripRole.VIEWER)
 
-                val ex = shouldThrow<ResponseStatusException> { service.create(tripId, request, userId) }
+                val ex = shouldThrow<ResponseStatusException> { service.create(command) }
                 ex.statusCode shouldBe HttpStatus.FORBIDDEN
             }
         }
@@ -93,14 +93,14 @@ class BudgetServiceTest : BehaviorSpec({
                 every { tripMemberRepository.findByTripIdAndUserId(tripId, userId) } returns memberWith(TripRole.EDITOR)
                 every { tripRepository.findByIdOrNull(tripId) } returns null
 
-                val ex = shouldThrow<ResponseStatusException> { service.create(tripId, request, userId) }
+                val ex = shouldThrow<ResponseStatusException> { service.create(command) }
                 ex.statusCode shouldBe HttpStatus.NOT_FOUND
             }
         }
     }
 
     given("update") {
-        val request = UpdateBudgetRequest(category = BudgetCategory.TRANSPORT, amount = 50000, memo = null)
+        val command = BudgetCommand.Update(tripId = tripId, itemId = itemId, category = BudgetCategory.TRANSPORT, amount = 50000, memo = null, userId = userId)
 
         `when`("EDITOR 권한이고 해당 여행의 항목일 때") {
             then("항목을 수정하고 반환한다") {
@@ -108,7 +108,7 @@ class BudgetServiceTest : BehaviorSpec({
                 every { tripMemberRepository.findByTripIdAndUserId(tripId, userId) } returns memberWith(TripRole.EDITOR)
                 every { budgetRepository.findByIdOrNull(itemId) } returns item
 
-                val result = service.update(tripId, itemId, request, userId)
+                val result = service.update(command)
                 result.category shouldBe BudgetCategory.TRANSPORT
                 result.amount shouldBe 50000
             }
@@ -124,7 +124,7 @@ class BudgetServiceTest : BehaviorSpec({
                 every { tripMemberRepository.findByTripIdAndUserId(tripId, userId) } returns memberWith(TripRole.EDITOR)
                 every { budgetRepository.findByIdOrNull(itemId) } returns item
 
-                val ex = shouldThrow<ResponseStatusException> { service.update(tripId, itemId, request, userId) }
+                val ex = shouldThrow<ResponseStatusException> { service.update(command) }
                 ex.statusCode shouldBe HttpStatus.NOT_FOUND
             }
         }
@@ -133,13 +133,15 @@ class BudgetServiceTest : BehaviorSpec({
             then("403 FORBIDDEN을 던진다") {
                 every { tripMemberRepository.findByTripIdAndUserId(tripId, userId) } returns memberWith(TripRole.VIEWER)
 
-                val ex = shouldThrow<ResponseStatusException> { service.update(tripId, itemId, request, userId) }
+                val ex = shouldThrow<ResponseStatusException> { service.update(command) }
                 ex.statusCode shouldBe HttpStatus.FORBIDDEN
             }
         }
     }
 
     given("delete") {
+        val command = BudgetCommand.Delete(tripId = tripId, itemId = itemId, userId = userId)
+
         `when`("EDITOR 권한이고 해당 여행의 항목일 때") {
             then("항목을 삭제한다") {
                 val item = makeItem()
@@ -147,7 +149,7 @@ class BudgetServiceTest : BehaviorSpec({
                 every { budgetRepository.findByIdOrNull(itemId) } returns item
                 every { budgetRepository.delete(item) } just Runs
 
-                service.delete(tripId, itemId, userId)
+                service.delete(command)
                 verify { budgetRepository.delete(item) }
             }
         }
@@ -157,7 +159,7 @@ class BudgetServiceTest : BehaviorSpec({
                 every { tripMemberRepository.findByTripIdAndUserId(tripId, userId) } returns memberWith(TripRole.EDITOR)
                 every { budgetRepository.findByIdOrNull(itemId) } returns null
 
-                val ex = shouldThrow<ResponseStatusException> { service.delete(tripId, itemId, userId) }
+                val ex = shouldThrow<ResponseStatusException> { service.delete(command) }
                 ex.statusCode shouldBe HttpStatus.NOT_FOUND
             }
         }
