@@ -1,7 +1,9 @@
-package demo.travel.invite
+package demo.travel.invite.presentation
 
 import demo.travel.auth.resolver.CurrentUser
 import demo.travel.config.FrontendProperties
+import demo.travel.invite.application.InviteService
+import demo.travel.invite.presentation.dto.InviteResponse
 import demo.travel.user.User
 import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.*
@@ -17,11 +19,12 @@ class InviteController(
     fun createInviteLink(
         @CurrentUser user: User,
         @PathVariable tripId: UUID,
-    ) = inviteService.createInviteLink(tripId, user.id, frontendProperties.url)
+    ): InviteResponse.Link =
+        InviteResponse.Link.of(inviteService.createInviteLink(tripId, user.id, frontendProperties.url))
 
     @GetMapping("/api/invite/{shareToken}")
-    fun getInviteInfo(@PathVariable shareToken: String) =
-        inviteService.getInviteInfo(shareToken)
+    fun getInviteInfo(@PathVariable shareToken: String): InviteResponse.Info =
+        InviteResponse.Info.of(inviteService.getInviteInfo(shareToken))
 
     @PostMapping("/api/invite/{shareToken}/accept")
     @ResponseStatus(HttpStatus.CREATED)

@@ -1,5 +1,6 @@
 package demo.travel.invite
 
+import demo.travel.invite.application.InviteService
 import demo.travel.trip.Trip
 import demo.travel.trip.TripMember
 import demo.travel.trip.TripMemberRepository
@@ -48,7 +49,7 @@ class InviteServiceTest : BehaviorSpec({
 
     given("createInviteLink") {
         `when`("EDITOR 권한이고 shareToken이 없을 때") {
-            then("새 토큰을 생성하고 InviteLinkResponse를 반환한다") {
+            then("새 토큰을 생성하고 InviteResult.Link를 반환한다") {
                 val editorMember = memberWith(TripRole.EDITOR)
                 every { tripMemberRepository.findByTripIdAndUserId(tripId, userId) } returns editorMember
 
