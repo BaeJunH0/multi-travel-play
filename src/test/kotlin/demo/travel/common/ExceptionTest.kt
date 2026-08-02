@@ -1,6 +1,5 @@
 package demo.travel.common
 
-import demo.travel.block.BlockType
 import demo.travel.block.application.dto.BlockResult
 import demo.travel.common.exception.BusinessException
 import demo.travel.common.exception.VersionConflictException
@@ -44,7 +43,7 @@ class ExceptionTest : BehaviorSpec({
         val blockResult = BlockResult(
             id = UUID.randomUUID(),
             dayNumber = 1, position = 1.0,
-            blockType = BlockType.PLACE, placeName = "경복궁",
+            blockType = TripCategory.PLACE, placeName = "경복궁",
             lat = null, lng = null, startTime = null,
             durationMin = null, cost = null, memo = null,
             lockedBy = null, lockedByNickname = null,

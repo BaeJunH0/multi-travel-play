@@ -1,5 +1,6 @@
 package demo.travel.block
 
+import demo.travel.common.TripCategory
 import demo.travel.trip.Trip
 import demo.travel.trip.TripRepository
 import demo.travel.user.AuthProvider
@@ -38,7 +39,7 @@ class BlockRepositoryTest : BehaviorSpec() {
         blockRepository.save(
             ScheduleBlock(
                 trip = trip, dayNumber = dayNumber, position = position,
-                blockType = BlockType.PLACE, placeName = "장소", createdBy = creator,
+                blockType = TripCategory.PLACE, placeName = "장소", createdBy = creator,
             )
         )
 

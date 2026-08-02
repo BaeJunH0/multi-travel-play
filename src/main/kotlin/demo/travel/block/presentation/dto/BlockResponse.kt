@@ -1,14 +1,14 @@
 package demo.travel.block.presentation.dto
 
-import demo.travel.block.BlockType
 import demo.travel.block.application.dto.BlockResult
+import demo.travel.common.TripCategory
 import java.util.UUID
 
 data class BlockResponse(
     val id: UUID,
     val dayNumber: Int,
     val position: Double,
-    val blockType: BlockType,
+    val blockType: TripCategory,
     val placeName: String,
     val lat: Double?,
     val lng: Double?,

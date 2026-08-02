@@ -56,7 +56,7 @@ checkVersion(block, command.version)  // version 불일치 → VersionConflictEx
 | `trip` | Trip (ManyToOne, LAZY) | 소속 여행 |
 | `dayNumber` | Int | 여행 일차 (1, 2, 3 ...) |
 | `position` | Double | Fractional Indexing 순서값 |
-| `blockType` | BlockType | `HOTEL / FOOD / CAFE / PLACE / TRANSPORT` |
+| `blockType` | TripCategory (`demo.travel.common`) | block/budget 공용 enum. block에서는 `HOTEL / FOOD / CAFE / PLACE / TRANSPORT`만 사용 |
 | `placeName` | String | 장소명 (필수) |
 | `lat`, `lng` | Double? | 좌표 (AI 일정 적용 시 Google Places로 보강, null 허용) |
 | `startTime` | LocalTime? | 방문 시작 시각 |
@@ -87,3 +87,16 @@ checkVersion(block, command.version)  // version 불일치 → VersionConflictEx
 `reorder`는 WebSocket 이벤트를 발행하지 않는다.
 
 구독 destination: `/topic/trip.{tripId}`
+
+---
+
+## budget 동기화 (block → budget)
+
+block에 cost가 채워지면 budget 도메인에 자동으로 반영된다. block이 budget 도메인을 직접 호출하지 않고,
+Spring `ApplicationEventPublisher`로 이벤트만 발행한다 (`demo.travel.block.event.BlockCostEvent.kt`).
+
+- `BlockCostChangedEvent(blockId, tripId, category, cost, placeName)`: `addBlock`에서 cost가 있을 때, `updateBlock`에서 요청에 cost가 포함됐을 때 발행
+- `BlockDeletedEvent(blockId)`: `deleteBlock`에서 항상 발행
+- `AiService.apply()`도 block을 직접 저장하므로 동일하게 `BlockCostChangedEvent`를 발행한다
+
+budget 쪽 리스너(`demo.travel.budget.application.BlockBudgetSyncListener`)가 `@TransactionalEventListener(AFTER_COMMIT)`로 구독해서 blockId로 연동된 `BudgetItem`을 생성/갱신/삭제한다. block 트랜잭션 커밋 이후 별도 트랜잭션(`REQUIRES_NEW`)으로 처리되므로, budget 쪽 반영이 실패해도 block 저장 자체는 영향받지 않는다(최종적 일관성).

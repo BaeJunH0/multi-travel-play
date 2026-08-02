@@ -1,6 +1,7 @@
 package demo.travel.block
 
 import demo.travel.block.application.dto.BlockResult
+import demo.travel.common.TripCategory
 import demo.travel.trip.Trip
 import demo.travel.user.AuthProvider
 import demo.travel.user.User
@@ -25,7 +26,7 @@ class BlockResultTest : BehaviorSpec({
         memo: String? = null,
     ) = ScheduleBlock(
         trip = trip, dayNumber = 1, position = 1.0,
-        blockType = BlockType.PLACE, placeName = "경복궁",
+        blockType = TripCategory.PLACE, placeName = "경복궁",
         createdBy = creator, startTime = startTime, cost = cost, memo = memo, lockedBy = lockedBy,
     )
 
@@ -81,7 +82,7 @@ class BlockResultTest : BehaviorSpec({
                 result.id shouldBe block.id
                 result.dayNumber shouldBe 1
                 result.position shouldBe 1.0
-                result.blockType shouldBe BlockType.PLACE
+                result.blockType shouldBe TripCategory.PLACE
                 result.placeName shouldBe "경복궁"
                 result.cost shouldBe 5000
                 result.memo shouldBe "입장료"

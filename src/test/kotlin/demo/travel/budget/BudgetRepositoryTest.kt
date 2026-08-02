@@ -1,5 +1,6 @@
 package demo.travel.budget
 
+import demo.travel.common.TripCategory
 import demo.travel.trip.Trip
 import demo.travel.trip.TripRepository
 import demo.travel.user.AuthProvider
@@ -32,7 +33,7 @@ class BudgetRepositoryTest : BehaviorSpec() {
         )
     )
 
-    private fun savedItem(trip: Trip, category: BudgetCategory = BudgetCategory.ETC, amount: Int = 10000) =
+    private fun savedItem(trip: Trip, category: TripCategory = TripCategory.ETC, amount: Int = 10000) =
         budgetRepository.save(BudgetItem(trip = trip, category = category, amount = amount))
 
     init {
@@ -41,9 +42,9 @@ class BudgetRepositoryTest : BehaviorSpec() {
                 then("3개를 반환한다") {
                     val user = savedUser("fa1")
                     val trip = savedTrip(user)
-                    savedItem(trip, BudgetCategory.FLIGHT, 500000)
-                    savedItem(trip, BudgetCategory.HOTEL, 300000)
-                    savedItem(trip, BudgetCategory.FOOD, 50000)
+                    savedItem(trip, TripCategory.FLIGHT, 500000)
+                    savedItem(trip, TripCategory.HOTEL, 300000)
+                    savedItem(trip, TripCategory.FOOD, 50000)
 
                     val result = budgetRepository.findAllByTripId(trip.id)
 
@@ -72,8 +73,8 @@ class BudgetRepositoryTest : BehaviorSpec() {
                             startDate = LocalDate.of(2026, 9, 1), endDate = LocalDate.of(2026, 9, 2),
                         )
                     )
-                    savedItem(trip1, BudgetCategory.TRANSPORT, 20000)
-                    savedItem(trip2, BudgetCategory.ETC, 5000)
+                    savedItem(trip1, TripCategory.TRANSPORT, 20000)
+                    savedItem(trip2, TripCategory.ETC, 5000)
 
                     val result = budgetRepository.findAllByTripId(trip1.id)
 
@@ -86,12 +87,12 @@ class BudgetRepositoryTest : BehaviorSpec() {
                 then("저장한 category와 amount를 반환한다") {
                     val user = savedUser("fa4")
                     val trip = savedTrip(user)
-                    savedItem(trip, BudgetCategory.HOTEL, 150000)
+                    savedItem(trip, TripCategory.HOTEL, 150000)
 
                     val result = budgetRepository.findAllByTripId(trip.id)
 
                     result shouldHaveSize 1
-                    result[0].category shouldBe BudgetCategory.HOTEL
+                    result[0].category shouldBe TripCategory.HOTEL
                     result[0].amount shouldBe 150000
                 }
             }

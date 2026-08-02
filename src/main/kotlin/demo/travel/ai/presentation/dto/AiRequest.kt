@@ -1,6 +1,6 @@
 package demo.travel.ai.presentation.dto
 
-import demo.travel.block.BlockType
+import demo.travel.common.TripCategory
 
 /** AI 일정 생성(`generate`) / 확정 저장(`apply`) API의 요청 DTO 모음. */
 object AiRequest {
@@ -11,7 +11,7 @@ object AiRequest {
      * @param targetDays 생성 결과를 적용할 Day 목록. 비어있으면 서버에서 "전체"로 취급.
      */
     data class GenerateRequest(
-        val tags: List<BlockType>,
+        val tags: List<TripCategory>,
         val targetDays: List<Int>,
         val style: String,
         val intensity: String,
@@ -38,7 +38,7 @@ object AiRequest {
      */
     data class SelectedBlock(
         val tempId: String,
-        val blockType: BlockType,
+        val blockType: TripCategory,
         val placeName: String,
         val startTime: String?,
         val durationMin: Int?,
