@@ -1,4 +1,4 @@
-package demo.travel.block.dto
+package demo.travel.block.presentation.dto
 
 import demo.travel.block.BlockType
 import jakarta.validation.constraints.NotBlank

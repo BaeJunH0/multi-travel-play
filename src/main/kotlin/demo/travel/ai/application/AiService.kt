@@ -8,7 +8,8 @@ import demo.travel.ai.presentation.dto.ApplyResponse
 import demo.travel.ai.presentation.dto.GenerateResponse
 import demo.travel.block.BlockRepository
 import demo.travel.block.ScheduleBlock
-import demo.travel.block.dto.BlockResponse
+import demo.travel.block.application.dto.BlockResult
+import demo.travel.block.presentation.dto.BlockResponse
 import demo.travel.trip.TripMemberRepository
 import demo.travel.trip.TripRepository
 import demo.travel.trip.TripRole
@@ -67,7 +68,7 @@ class AiService(
                     createdBy = user,
                 )
             )
-            AppliedBlock(tempId = selected.tempId, block = BlockResponse.of(saved))
+            AppliedBlock(tempId = selected.tempId, block = BlockResponse.of(BlockResult.of(saved)))
         }
 
         return ApplyResponse(added)

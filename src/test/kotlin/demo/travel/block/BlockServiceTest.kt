@@ -1,6 +1,7 @@
 package demo.travel.block
 
-import demo.travel.block.dto.BlockRequest
+import demo.travel.block.application.BlockService
+import demo.travel.block.application.dto.BlockCommand
 import demo.travel.common.exception.VersionConflictException
 import demo.travel.trip.Trip
 import demo.travel.trip.TripMember
@@ -71,13 +72,13 @@ class BlockServiceTest : BehaviorSpec({
     }
 
     given("addBlock") {
-        val request = BlockRequest.Create(
-            dayNumber = 1, blockType = BlockType.FOOD, placeName = "맛집",
-            startTime = "12:00", durationMin = 60, cost = 20000, memo = null,
+        val command = BlockCommand.Create(
+            tripId = tripId, dayNumber = 1, blockType = BlockType.FOOD, placeName = "맛집",
+            startTime = "12:00", durationMin = 60, cost = 20000, memo = null, userId = userId,
         )
 
         `when`("EDITOR 권한일 때") {
-            then("블록을 저장하고 BlockResponse를 반환한다") {
+            then("블록을 저장하고 BlockResult를 반환한다") {
                 val editorMember = memberWith(TripRole.EDITOR)
                 val savedBlock = ScheduleBlock(
                     trip = trip, dayNumber = 1, position = 2.0,
@@ -86,8 +87,9 @@ class BlockServiceTest : BehaviorSpec({
                 every { tripMemberRepository.findByTripIdAndUserId(tripId, userId) } returns editorMember
                 every { blockRepository.findTopByTripIdAndDayNumberOrderByPositionDesc(tripId, 1) } returns makeBlock()
                 every { blockRepository.save(any()) } returns savedBlock
+                every { userRepository.getReferenceById(userId) } returns user
 
-                val result = service.addBlock(tripId, request, user)
+                val result = service.addBlock(command)
                 result.placeName shouldBe "맛집"
                 verify { blockRepository.save(match { it.position == 2.0 }) }  // lastPosition(1.0) + 1.0
             }
@@ -103,8 +105,9 @@ class BlockServiceTest : BehaviorSpec({
                 every { tripMemberRepository.findByTripIdAndUserId(tripId, userId) } returns editorMember
                 every { blockRepository.findTopByTripIdAndDayNumberOrderByPositionDesc(tripId, 1) } returns null
                 every { blockRepository.save(any()) } returns savedBlock
+                every { userRepository.getReferenceById(userId) } returns user
 
-                val result = service.addBlock(tripId, request, user)
+                val result = service.addBlock(command)
                 verify { blockRepository.save(match { it.position == 1.0 }) }  // 0.0 + 1.0
             }
         }
@@ -113,14 +116,17 @@ class BlockServiceTest : BehaviorSpec({
             then("403 FORBIDDEN을 던진다") {
                 every { tripMemberRepository.findByTripIdAndUserId(tripId, userId) } returns memberWith(TripRole.VIEWER)
 
-                val ex = shouldThrow<ResponseStatusException> { service.addBlock(tripId, request, user) }
+                val ex = shouldThrow<ResponseStatusException> { service.addBlock(command) }
                 ex.statusCode shouldBe HttpStatus.FORBIDDEN
             }
         }
     }
 
     given("updateBlock") {
-        val request = BlockRequest.Update(placeName = "수정된 장소", startTime = null, durationMin = null, cost = null, memo = null, version = 0L)
+        val command = BlockCommand.Update(
+            tripId = tripId, blockId = blockId, placeName = "수정된 장소",
+            startTime = null, durationMin = null, cost = null, memo = null, version = 0L, userId = userId,
+        )
 
         `when`("잠금 없이 version이 일치할 때") {
             then("블록을 수정하고 반환한다") {
@@ -129,7 +135,7 @@ class BlockServiceTest : BehaviorSpec({
                 every { blockRepository.findByIdOrNull(blockId) } returns block
                 every { blockRepository.flush() } just Runs
 
-                val result = service.updateBlock(tripId, blockId, request, userId)
+                val result = service.updateBlock(command)
                 result.placeName shouldBe "수정된 장소"
             }
         }
@@ -140,7 +146,7 @@ class BlockServiceTest : BehaviorSpec({
                 every { tripMemberRepository.findByTripIdAndUserId(tripId, userId) } returns memberWith(TripRole.EDITOR)
                 every { blockRepository.findByIdOrNull(blockId) } returns block
 
-                val ex = shouldThrow<VersionConflictException> { service.updateBlock(tripId, blockId, request, userId) }
+                val ex = shouldThrow<VersionConflictException> { service.updateBlock(command) }
                 ex.currentBlock.version shouldBe 1L
             }
         }
@@ -151,7 +157,7 @@ class BlockServiceTest : BehaviorSpec({
                 every { tripMemberRepository.findByTripIdAndUserId(tripId, userId) } returns memberWith(TripRole.EDITOR)
                 every { blockRepository.findByIdOrNull(blockId) } returns block
 
-                val ex = shouldThrow<ResponseStatusException> { service.updateBlock(tripId, blockId, request, userId) }
+                val ex = shouldThrow<ResponseStatusException> { service.updateBlock(command) }
                 ex.statusCode.value() shouldBe 423
             }
         }
@@ -163,7 +169,7 @@ class BlockServiceTest : BehaviorSpec({
                 every { blockRepository.findByIdOrNull(blockId) } returns block
                 every { blockRepository.flush() } just Runs
 
-                val result = service.updateBlock(tripId, blockId, request, userId)
+                val result = service.updateBlock(command)
                 result.placeName shouldBe "수정된 장소"
             }
         }
@@ -175,14 +181,16 @@ class BlockServiceTest : BehaviorSpec({
                 every { tripMemberRepository.findByTripIdAndUserId(otherTripId, userId) } returns memberWith(TripRole.EDITOR)
                 every { blockRepository.findByIdOrNull(blockId) } returns block  // block.trip.id == tripId (다름)
 
-                val ex = shouldThrow<ResponseStatusException> { service.updateBlock(otherTripId, blockId, request, userId) }
+                val ex = shouldThrow<ResponseStatusException> {
+                    service.updateBlock(command.copy(tripId = otherTripId))
+                }
                 ex.statusCode shouldBe HttpStatus.NOT_FOUND
             }
         }
     }
 
     given("moveBlock") {
-        val request = BlockRequest.Move(dayNumber = 2, position = 1.5, version = 0L)
+        val command = BlockCommand.Move(tripId = tripId, blockId = blockId, dayNumber = 2, position = 1.5, version = 0L, userId = userId)
 
         `when`("version이 일치할 때") {
             then("dayNumber와 position을 변경하고 반환한다") {
@@ -191,7 +199,7 @@ class BlockServiceTest : BehaviorSpec({
                 every { blockRepository.findByIdOrNull(blockId) } returns block
                 every { blockRepository.flush() } just Runs
 
-                val result = service.moveBlock(tripId, blockId, request, userId)
+                val result = service.moveBlock(command)
                 result.dayNumber shouldBe 2
                 result.position shouldBe 1.5
             }
@@ -203,7 +211,7 @@ class BlockServiceTest : BehaviorSpec({
                 every { tripMemberRepository.findByTripIdAndUserId(tripId, userId) } returns memberWith(TripRole.EDITOR)
                 every { blockRepository.findByIdOrNull(blockId) } returns block
 
-                shouldThrow<VersionConflictException> { service.moveBlock(tripId, blockId, request, userId) }
+                shouldThrow<VersionConflictException> { service.moveBlock(command) }
             }
         }
     }

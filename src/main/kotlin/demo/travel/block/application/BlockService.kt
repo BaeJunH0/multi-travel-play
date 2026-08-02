@@ -1,11 +1,12 @@
-package demo.travel.block
+package demo.travel.block.application
 
-import demo.travel.block.dto.BlockRequest
-import demo.travel.block.dto.BlockResponse
+import demo.travel.block.BlockRepository
+import demo.travel.block.ScheduleBlock
+import demo.travel.block.application.dto.BlockCommand
+import demo.travel.block.application.dto.BlockResult
 import demo.travel.common.exception.VersionConflictException
 import demo.travel.trip.TripMemberRepository
 import demo.travel.trip.TripRole
-import demo.travel.user.User
 import demo.travel.user.UserRepository
 import org.springframework.data.repository.findByIdOrNull
 import org.springframework.http.HttpStatus
@@ -23,60 +24,60 @@ class BlockService(
     private val userRepository: UserRepository,
 ) {
     @Transactional(readOnly = true)
-    fun getBlocks(tripId: UUID, userId: UUID): List<BlockResponse> {
+    fun getBlocks(tripId: UUID, userId: UUID): List<BlockResult> {
         requireMember(tripId, userId)
         return blockRepository.findAllByTripIdOrderByDayNumberAscPositionAsc(tripId)
-            .map { BlockResponse.of(it) }
+            .map { BlockResult.of(it) }
     }
 
-    fun addBlock(tripId: UUID, request: BlockRequest.Create, user: User): BlockResponse {
-        requireEditorOrAbove(tripId, user.id)
+    fun addBlock(command: BlockCommand.Create): BlockResult {
+        requireEditorOrAbove(command.tripId, command.userId)
         val lastPosition = blockRepository
-            .findTopByTripIdAndDayNumberOrderByPositionDesc(tripId, request.dayNumber)
+            .findTopByTripIdAndDayNumberOrderByPositionDesc(command.tripId, command.dayNumber)
             ?.position ?: 0.0
         val block = blockRepository.save(
             ScheduleBlock(
-                trip = tripMemberRepository.findByTripIdAndUserId(tripId, user.id)!!.trip,
-                dayNumber = request.dayNumber,
+                trip = tripMemberRepository.findByTripIdAndUserId(command.tripId, command.userId)!!.trip,
+                dayNumber = command.dayNumber,
                 position = lastPosition + 1.0,
-                blockType = request.blockType,
-                placeName = request.placeName,
-                startTime = request.startTime?.let { LocalTime.parse(it) },
-                durationMin = request.durationMin,
-                cost = request.cost,
-                memo = request.memo,
-                createdBy = user,
+                blockType = command.blockType,
+                placeName = command.placeName,
+                startTime = command.startTime?.let { LocalTime.parse(it) },
+                durationMin = command.durationMin,
+                cost = command.cost,
+                memo = command.memo,
+                createdBy = userRepository.getReferenceById(command.userId),
             )
         )
-        return BlockResponse.of(block)
+        return BlockResult.of(block)
     }
 
-    fun updateBlock(tripId: UUID, blockId: UUID, request: BlockRequest.Update, userId: UUID): BlockResponse {
-        requireEditorOrAbove(tripId, userId)
-        val block = findBlockOrThrow(blockId, tripId)
-        checkLock(block, userId)
-        checkVersion(block, request.version)
+    fun updateBlock(command: BlockCommand.Update): BlockResult {
+        requireEditorOrAbove(command.tripId, command.userId)
+        val block = findBlockOrThrow(command.blockId, command.tripId)
+        checkLock(block, command.userId)
+        checkVersion(block, command.version)
 
-        request.placeName?.let { block.placeName = it }
-        request.startTime?.let { block.startTime = LocalTime.parse(it) }
-        request.durationMin?.let { block.durationMin = it }
-        request.cost?.let { block.cost = it }
-        request.memo?.let { block.memo = it }
+        command.placeName?.let { block.placeName = it }
+        command.startTime?.let { block.startTime = LocalTime.parse(it) }
+        command.durationMin?.let { block.durationMin = it }
+        command.cost?.let { block.cost = it }
+        command.memo?.let { block.memo = it }
 
         blockRepository.flush()
-        return BlockResponse.of(block)
+        return BlockResult.of(block)
     }
 
-    fun moveBlock(tripId: UUID, blockId: UUID, request: BlockRequest.Move, userId: UUID): BlockResponse {
-        requireEditorOrAbove(tripId, userId)
-        val block = findBlockOrThrow(blockId, tripId)
-        checkVersion(block, request.version)
+    fun moveBlock(command: BlockCommand.Move): BlockResult {
+        requireEditorOrAbove(command.tripId, command.userId)
+        val block = findBlockOrThrow(command.blockId, command.tripId)
+        checkVersion(block, command.version)
 
-        block.dayNumber = request.dayNumber
-        block.position = request.position
+        block.dayNumber = command.dayNumber
+        block.position = command.position
 
         blockRepository.flush()
-        return BlockResponse.of(block)
+        return BlockResult.of(block)
     }
 
     fun deleteBlock(tripId: UUID, blockId: UUID, userId: UUID) {
@@ -85,14 +86,14 @@ class BlockService(
         blockRepository.delete(block)
     }
 
-    fun lockBlock(tripId: UUID, blockId: UUID, userId: UUID): BlockResponse {
+    fun lockBlock(tripId: UUID, blockId: UUID, userId: UUID): BlockResult {
         requireEditorOrAbove(tripId, userId)
         val block = findBlockOrThrow(blockId, tripId)
         if (block.lockedBy != null && block.lockedBy!!.id != userId) {
             throw ResponseStatusException(HttpStatus.valueOf(423), "다른 사용자가 편집 중입니다.")
         }
         block.lockedBy = userRepository.getReferenceById(userId)
-        return BlockResponse.of(block)
+        return BlockResult.of(block)
     }
 
     fun unlockBlock(tripId: UUID, blockId: UUID, userId: UUID) {
@@ -134,6 +135,6 @@ class BlockService(
     }
 
     private fun checkVersion(block: ScheduleBlock, requestVersion: Long) {
-        if (block.version != requestVersion) throw VersionConflictException(BlockResponse.of(block))
+        if (block.version != requestVersion) throw VersionConflictException(BlockResult.of(block))
     }
 }

@@ -1,7 +1,7 @@
 package demo.travel.ai.presentation.dto
 
-import demo.travel.block.dto.BlockResponse
 import demo.travel.block.BlockType
+import demo.travel.block.presentation.dto.BlockResponse
 
 /** `generate` API 응답. DB에는 아무것도 저장되지 않은, AI가 제안한 블록 목록. */
 data class GenerateResponse(
