@@ -2,6 +2,9 @@ package demo.travel.block
 
 import demo.travel.block.application.BlockService
 import demo.travel.block.application.dto.BlockCommand
+import demo.travel.block.event.BlockCostChangedEvent
+import demo.travel.block.event.BlockDeletedEvent
+import demo.travel.common.TripCategory
 import demo.travel.common.exception.VersionConflictException
 import demo.travel.trip.Trip
 import demo.travel.trip.TripMember
@@ -14,6 +17,7 @@ import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.matchers.shouldBe
 import io.mockk.*
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.data.repository.findByIdOrNull
 import org.springframework.http.HttpStatus
 import org.springframework.web.server.ResponseStatusException
@@ -25,7 +29,8 @@ class BlockServiceTest : BehaviorSpec({
     val blockRepository = mockk<BlockRepository>()
     val tripMemberRepository = mockk<TripMemberRepository>()
     val userRepository = mockk<UserRepository>()
-    val service = BlockService(blockRepository, tripMemberRepository, userRepository)
+    val eventPublisher = mockk<ApplicationEventPublisher>(relaxed = true)
+    val service = BlockService(blockRepository, tripMemberRepository, userRepository, eventPublisher)
 
     val userId = UUID.randomUUID()
     val otherId = UUID.randomUUID()
@@ -43,7 +48,7 @@ class BlockServiceTest : BehaviorSpec({
 
     fun makeBlock(version: Long = 0L, lockedBy: User? = null) = ScheduleBlock(
         id = blockId, trip = trip, dayNumber = 1, position = 1.0,
-        blockType = BlockType.PLACE, placeName = "경복궁", createdBy = user,
+        blockType = TripCategory.PLACE, placeName = "경복궁", createdBy = user,
         version = version, lockedBy = lockedBy,
     )
 
@@ -73,7 +78,7 @@ class BlockServiceTest : BehaviorSpec({
 
     given("addBlock") {
         val command = BlockCommand.Create(
-            tripId = tripId, dayNumber = 1, blockType = BlockType.FOOD, placeName = "맛집",
+            tripId = tripId, dayNumber = 1, blockType = TripCategory.FOOD, placeName = "맛집",
             startTime = "12:00", durationMin = 60, cost = 20000, memo = null, userId = userId,
         )
 
@@ -82,7 +87,7 @@ class BlockServiceTest : BehaviorSpec({
                 val editorMember = memberWith(TripRole.EDITOR)
                 val savedBlock = ScheduleBlock(
                     trip = trip, dayNumber = 1, position = 2.0,
-                    blockType = BlockType.FOOD, placeName = "맛집", createdBy = user,
+                    blockType = TripCategory.FOOD, placeName = "맛집", createdBy = user, cost = 20000,
                 )
                 every { tripMemberRepository.findByTripIdAndUserId(tripId, userId) } returns editorMember
                 every { blockRepository.findTopByTripIdAndDayNumberOrderByPositionDesc(tripId, 1) } returns makeBlock()
@@ -92,6 +97,7 @@ class BlockServiceTest : BehaviorSpec({
                 val result = service.addBlock(command)
                 result.placeName shouldBe "맛집"
                 verify { blockRepository.save(match { it.position == 2.0 }) }  // lastPosition(1.0) + 1.0
+                verify { eventPublisher.publishEvent(match<Any> { it is BlockCostChangedEvent && it.cost == 20000 }) }
             }
         }
 
@@ -100,7 +106,7 @@ class BlockServiceTest : BehaviorSpec({
                 val editorMember = memberWith(TripRole.EDITOR)
                 val savedBlock = ScheduleBlock(
                     trip = trip, dayNumber = 1, position = 1.0,
-                    blockType = BlockType.FOOD, placeName = "맛집", createdBy = user,
+                    blockType = TripCategory.FOOD, placeName = "맛집", createdBy = user,
                 )
                 every { tripMemberRepository.findByTripIdAndUserId(tripId, userId) } returns editorMember
                 every { blockRepository.findTopByTripIdAndDayNumberOrderByPositionDesc(tripId, 1) } returns null
@@ -137,6 +143,20 @@ class BlockServiceTest : BehaviorSpec({
 
                 val result = service.updateBlock(command)
                 result.placeName shouldBe "수정된 장소"
+                verify(exactly = 0) { eventPublisher.publishEvent(any()) }  // cost가 command에 없으면 이벤트 미발행
+            }
+        }
+
+        `when`("cost가 변경될 때") {
+            then("BlockCostChangedEvent를 발행한다") {
+                val block = makeBlock(version = 0L, lockedBy = null)
+                every { tripMemberRepository.findByTripIdAndUserId(tripId, userId) } returns memberWith(TripRole.EDITOR)
+                every { blockRepository.findByIdOrNull(blockId) } returns block
+                every { blockRepository.flush() } just Runs
+
+                service.updateBlock(command.copy(cost = 15000))
+
+                verify { eventPublisher.publishEvent(match<Any> { it is BlockCostChangedEvent && it.blockId == blockId && it.cost == 15000 }) }
             }
         }
 
@@ -227,6 +247,7 @@ class BlockServiceTest : BehaviorSpec({
                 service.deleteBlock(tripId, blockId, userId)
 
                 verify { blockRepository.delete(block) }
+                verify { eventPublisher.publishEvent(match<Any> { it is BlockDeletedEvent && it.blockId == blockId }) }
             }
         }
 
@@ -305,13 +326,13 @@ class BlockServiceTest : BehaviorSpec({
         `when`("Day 1에 3개, Day 2에 2개의 블록이 있을 때") {
             then("각 Day 내 position을 1.0, 2.0, 3.0, ...으로 재정규화한다") {
                 val day1Blocks = listOf(
-                    ScheduleBlock(trip = trip, dayNumber = 1, position = 0.1, blockType = BlockType.PLACE, placeName = "A", createdBy = user),
-                    ScheduleBlock(trip = trip, dayNumber = 1, position = 0.15, blockType = BlockType.FOOD, placeName = "B", createdBy = user),
-                    ScheduleBlock(trip = trip, dayNumber = 1, position = 0.2, blockType = BlockType.CAFE, placeName = "C", createdBy = user),
+                    ScheduleBlock(trip = trip, dayNumber = 1, position = 0.1, blockType = TripCategory.PLACE, placeName = "A", createdBy = user),
+                    ScheduleBlock(trip = trip, dayNumber = 1, position = 0.15, blockType = TripCategory.FOOD, placeName = "B", createdBy = user),
+                    ScheduleBlock(trip = trip, dayNumber = 1, position = 0.2, blockType = TripCategory.CAFE, placeName = "C", createdBy = user),
                 )
                 val day2Blocks = listOf(
-                    ScheduleBlock(trip = trip, dayNumber = 2, position = 0.5, blockType = BlockType.HOTEL, placeName = "D", createdBy = user),
-                    ScheduleBlock(trip = trip, dayNumber = 2, position = 0.6, blockType = BlockType.TRANSPORT, placeName = "E", createdBy = user),
+                    ScheduleBlock(trip = trip, dayNumber = 2, position = 0.5, blockType = TripCategory.HOTEL, placeName = "D", createdBy = user),
+                    ScheduleBlock(trip = trip, dayNumber = 2, position = 0.6, blockType = TripCategory.TRANSPORT, placeName = "E", createdBy = user),
                 )
                 every { tripMemberRepository.findByTripIdAndUserId(tripId, userId) } returns memberWith(TripRole.EDITOR)
                 every { blockRepository.findAllByTripIdOrderByDayNumberAscPositionAsc(tripId) } returns day1Blocks + day2Blocks

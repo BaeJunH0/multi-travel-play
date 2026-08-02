@@ -1,5 +1,6 @@
 package demo.travel.block
 
+import demo.travel.common.TripCategory
 import demo.travel.trip.Trip
 import demo.travel.user.User
 import jakarta.persistence.*
@@ -28,7 +29,7 @@ class ScheduleBlock(
 
     @Column(nullable = false, length = 20)
     @Enumerated(EnumType.STRING)
-    var blockType: BlockType,
+    var blockType: TripCategory,
 
     @Column(nullable = false, length = 255)
     var placeName: String,
@@ -66,5 +67,3 @@ class ScheduleBlock(
         updatedAt = LocalDateTime.now()
     }
 }
-
-enum class BlockType { HOTEL, FOOD, CAFE, PLACE, TRANSPORT }

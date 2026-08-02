@@ -9,11 +9,13 @@ import demo.travel.ai.presentation.dto.GenerateResponse
 import demo.travel.block.BlockRepository
 import demo.travel.block.ScheduleBlock
 import demo.travel.block.application.dto.BlockResult
+import demo.travel.block.event.toCostChangedEventOrNull
 import demo.travel.block.presentation.dto.BlockResponse
 import demo.travel.trip.TripMemberRepository
 import demo.travel.trip.TripRepository
 import demo.travel.trip.TripRole
 import demo.travel.user.User
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.data.repository.findByIdOrNull
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
@@ -30,6 +32,7 @@ class AiService(
     private val tripRepository: TripRepository,
     private val tripMemberRepository: TripMemberRepository,
     private val blockRepository: BlockRepository,
+    private val eventPublisher: ApplicationEventPublisher,
 ) {
     fun generate(tripId: UUID, request: AiRequest.GenerateRequest, userId: UUID): GenerateResponse {
         requireEditorOrAbove(tripId, userId)
@@ -68,6 +71,7 @@ class AiService(
                     createdBy = user,
                 )
             )
+            saved.toCostChangedEventOrNull()?.let { eventPublisher.publishEvent(it) }
             AppliedBlock(tempId = selected.tempId, block = BlockResponse.of(BlockResult.of(saved)))
         }
 

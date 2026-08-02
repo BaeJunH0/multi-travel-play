@@ -1,13 +1,13 @@
 package demo.travel.block.application.dto
 
-import demo.travel.block.BlockType
+import demo.travel.common.TripCategory
 import java.util.UUID
 
 object BlockCommand {
     data class Create(
         val tripId: UUID,
         val dayNumber: Int,
-        val blockType: BlockType,
+        val blockType: TripCategory,
         val placeName: String,
         val startTime: String?,
         val durationMin: Int?,

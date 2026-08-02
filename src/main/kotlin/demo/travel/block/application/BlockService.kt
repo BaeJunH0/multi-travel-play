@@ -4,10 +4,13 @@ import demo.travel.block.BlockRepository
 import demo.travel.block.ScheduleBlock
 import demo.travel.block.application.dto.BlockCommand
 import demo.travel.block.application.dto.BlockResult
+import demo.travel.block.event.BlockDeletedEvent
+import demo.travel.block.event.toCostChangedEventOrNull
 import demo.travel.common.exception.VersionConflictException
 import demo.travel.trip.TripMemberRepository
 import demo.travel.trip.TripRole
 import demo.travel.user.UserRepository
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.data.repository.findByIdOrNull
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
@@ -22,6 +25,7 @@ class BlockService(
     private val blockRepository: BlockRepository,
     private val tripMemberRepository: TripMemberRepository,
     private val userRepository: UserRepository,
+    private val eventPublisher: ApplicationEventPublisher,
 ) {
     @Transactional(readOnly = true)
     fun getBlocks(tripId: UUID, userId: UUID): List<BlockResult> {
@@ -49,6 +53,7 @@ class BlockService(
                 createdBy = userRepository.getReferenceById(command.userId),
             )
         )
+        block.toCostChangedEventOrNull()?.let { eventPublisher.publishEvent(it) }
         return BlockResult.of(block)
     }
 
@@ -65,6 +70,7 @@ class BlockService(
         command.memo?.let { block.memo = it }
 
         blockRepository.flush()
+        if (command.cost != null) block.toCostChangedEventOrNull()?.let { eventPublisher.publishEvent(it) }
         return BlockResult.of(block)
     }
 
@@ -84,6 +90,7 @@ class BlockService(
         requireEditorOrAbove(tripId, userId)
         val block = findBlockOrThrow(blockId, tripId)
         blockRepository.delete(block)
+        eventPublisher.publishEvent(BlockDeletedEvent(block.id))
     }
 
     fun lockBlock(tripId: UUID, blockId: UUID, userId: UUID): BlockResult {

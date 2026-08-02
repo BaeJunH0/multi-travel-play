@@ -44,6 +44,7 @@ OpenAI API를 통해 여행 일정 블록을 AI로 생성하고, 사용자가 �
 4. `ScheduleBlock` 엔티티 생성 후 `blockRepository.save`
    - 모든 필드(`blockType`, `placeName`, `startTime` 등)와 `dayNumber`/`position`을
      요청의 `SelectedBlock`에서 그대로 가져옴 — 서버가 별도로 검증/보강하는 원본은 없음
+   - 저장된 블록에 cost가 있으면 `BlockCostChangedEvent`를 발행해 budget에도 반영한다 (block/CLAUDE.md "budget 동기화" 참고)
 5. `ApplyResponse(addedBlocks)` 반환 (`tempId`는 요청 값을 그대로 echo)
 
 ### 권한 체크
@@ -60,7 +61,7 @@ private fun requireEditorOrAbove(tripId: UUID, userId: UUID) {
 ## DTO 구조
 
 **요청**
-- `GenerateRequest`: `tags: List<BlockType>`, `targetDays: List<Int>`, `style`, `intensity`, `extraRequest?`
+- `GenerateRequest`: `tags: List<TripCategory>`, `targetDays: List<Int>`, `style`, `intensity`, `extraRequest?`
 - `ApplyRequest`: `selectedBlocks: List<SelectedBlock>`
 - `SelectedBlock`: `tempId`, `blockType`, `placeName`, `startTime?`, `durationMin?`, `cost?`, `memo?`, `dayNumber`, `position: Double`
 

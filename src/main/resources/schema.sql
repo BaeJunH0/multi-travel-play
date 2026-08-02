@@ -64,8 +64,10 @@ CREATE TABLE IF NOT EXISTS budget_items
 (
     id       CHAR(36)    NOT NULL PRIMARY KEY,
     trip_id  CHAR(36)    NOT NULL,
+    block_id CHAR(36)    UNIQUE,
     category VARCHAR(20) NOT NULL,
     amount   INT         NOT NULL,
     memo     VARCHAR(255),
-    FOREIGN KEY (trip_id) REFERENCES trips (id) ON DELETE CASCADE
+    FOREIGN KEY (trip_id) REFERENCES trips (id) ON DELETE CASCADE,
+    FOREIGN KEY (block_id) REFERENCES schedule_blocks (id) ON DELETE CASCADE
 );

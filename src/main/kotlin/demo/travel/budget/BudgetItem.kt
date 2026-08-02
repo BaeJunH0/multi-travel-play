@@ -1,5 +1,6 @@
 package demo.travel.budget
 
+import demo.travel.common.TripCategory
 import demo.travel.trip.Trip
 import jakarta.persistence.*
 import java.util.UUID
@@ -14,9 +15,12 @@ class BudgetItem(
     @JoinColumn(name = "trip_id", nullable = false)
     val trip: Trip,
 
+    @Column(name = "block_id")
+    var blockId: UUID? = null,
+
     @Column(nullable = false, length = 20)
     @Enumerated(EnumType.STRING)
-    var category: BudgetCategory,
+    var category: TripCategory,
 
     @Column(nullable = false)
     var amount: Int,
@@ -24,5 +28,3 @@ class BudgetItem(
     @Column(length = 255)
     var memo: String? = null,
 )
-
-enum class BudgetCategory { FLIGHT, HOTEL, FOOD, TRANSPORT, ETC }

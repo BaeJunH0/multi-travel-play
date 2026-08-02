@@ -2,6 +2,7 @@ package demo.travel.budget
 
 import demo.travel.budget.application.BudgetService
 import demo.travel.budget.application.dto.BudgetCommand
+import demo.travel.common.TripCategory
 import demo.travel.trip.Trip
 import demo.travel.trip.TripMember
 import demo.travel.trip.TripMemberRepository
@@ -37,7 +38,7 @@ class BudgetServiceTest : BehaviorSpec({
     )
 
     fun memberWith(role: TripRole) = TripMember(trip = trip, user = user, role = role)
-    fun makeItem(t: Trip = trip) = BudgetItem(id = itemId, trip = t, category = BudgetCategory.FOOD, amount = 30000)
+    fun makeItem(t: Trip = trip) = BudgetItem(id = itemId, trip = t, category = TripCategory.FOOD, amount = 30000)
 
     beforeEach { clearAllMocks() }
 
@@ -64,17 +65,17 @@ class BudgetServiceTest : BehaviorSpec({
     }
 
     given("create") {
-        val command = BudgetCommand.Create(tripId = tripId, category = BudgetCategory.HOTEL, amount = 100000, memo = "숙박비", userId = userId)
+        val command = BudgetCommand.Create(tripId = tripId, category = TripCategory.HOTEL, amount = 100000, memo = "숙박비", userId = userId)
 
         `when`("EDITOR 권한일 때") {
             then("예산 항목을 저장하고 반환한다") {
-                val savedItem = BudgetItem(trip = trip, category = BudgetCategory.HOTEL, amount = 100000, memo = "숙박비")
+                val savedItem = BudgetItem(trip = trip, category = TripCategory.HOTEL, amount = 100000, memo = "숙박비")
                 every { tripMemberRepository.findByTripIdAndUserId(tripId, userId) } returns memberWith(TripRole.EDITOR)
                 every { tripRepository.findByIdOrNull(tripId) } returns trip
                 every { budgetRepository.save(any()) } returns savedItem
 
                 val result = service.create(command)
-                result.category shouldBe BudgetCategory.HOTEL
+                result.category shouldBe TripCategory.HOTEL
                 result.amount shouldBe 100000
             }
         }
@@ -100,7 +101,7 @@ class BudgetServiceTest : BehaviorSpec({
     }
 
     given("update") {
-        val command = BudgetCommand.Update(tripId = tripId, itemId = itemId, category = BudgetCategory.TRANSPORT, amount = 50000, memo = null, userId = userId)
+        val command = BudgetCommand.Update(tripId = tripId, itemId = itemId, category = TripCategory.TRANSPORT, amount = 50000, memo = null, userId = userId)
 
         `when`("EDITOR 권한이고 해당 여행의 항목일 때") {
             then("항목을 수정하고 반환한다") {
@@ -109,7 +110,7 @@ class BudgetServiceTest : BehaviorSpec({
                 every { budgetRepository.findByIdOrNull(itemId) } returns item
 
                 val result = service.update(command)
-                result.category shouldBe BudgetCategory.TRANSPORT
+                result.category shouldBe TripCategory.TRANSPORT
                 result.amount shouldBe 50000
             }
         }

@@ -1,13 +1,13 @@
 package demo.travel.block.presentation.dto
 
-import demo.travel.block.BlockType
+import demo.travel.common.TripCategory
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.NotNull
 
 object BlockRequest {
     data class Create(
         @field:NotNull val dayNumber: Int,
-        @field:NotNull val blockType: BlockType,
+        @field:NotNull val blockType: TripCategory,
         @field:NotBlank val placeName: String,
         val startTime: String?,
         val durationMin: Int?,
