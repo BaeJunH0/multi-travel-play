@@ -1,8 +1,9 @@
-package demo.travel.budget
+package demo.travel.budget.application
 
-import demo.travel.budget.dto.BudgetItemResponse
-import demo.travel.budget.dto.CreateBudgetRequest
-import demo.travel.budget.dto.UpdateBudgetRequest
+import demo.travel.budget.BudgetItem
+import demo.travel.budget.BudgetRepository
+import demo.travel.budget.application.dto.BudgetCommand
+import demo.travel.budget.application.dto.BudgetResult
 import demo.travel.trip.TripMemberRepository
 import demo.travel.trip.TripRepository
 import demo.travel.trip.TripRole
@@ -21,39 +22,39 @@ class BudgetService(
     private val tripMemberRepository: TripMemberRepository,
 ) {
     @Transactional(readOnly = true)
-    fun getItems(tripId: UUID, userId: UUID): List<BudgetItemResponse> {
+    fun getItems(tripId: UUID, userId: UUID): List<BudgetResult> {
         requireMember(tripId, userId)
-        return budgetRepository.findAllByTripId(tripId).map { BudgetItemResponse.of(it) }
+        return budgetRepository.findAllByTripId(tripId).map { BudgetResult.of(it) }
     }
 
-    fun create(tripId: UUID, request: CreateBudgetRequest, userId: UUID): BudgetItemResponse {
-        requireEditorOrAbove(tripId, userId)
-        val trip = tripRepository.findByIdOrNull(tripId)
+    fun create(command: BudgetCommand.Create): BudgetResult {
+        requireEditorOrAbove(command.tripId, command.userId)
+        val trip = tripRepository.findByIdOrNull(command.tripId)
             ?: throw ResponseStatusException(HttpStatus.NOT_FOUND)
         val item = budgetRepository.save(
-            BudgetItem(trip = trip, category = request.category, amount = request.amount, memo = request.memo)
+            BudgetItem(trip = trip, category = command.category, amount = command.amount, memo = command.memo)
         )
-        return BudgetItemResponse.of(item)
+        return BudgetResult.of(item)
     }
 
-    fun update(tripId: UUID, itemId: UUID, request: UpdateBudgetRequest, userId: UUID): BudgetItemResponse {
-        requireEditorOrAbove(tripId, userId)
-        val item = budgetRepository.findByIdOrNull(itemId)
+    fun update(command: BudgetCommand.Update): BudgetResult {
+        requireEditorOrAbove(command.tripId, command.userId)
+        val item = budgetRepository.findByIdOrNull(command.itemId)
             ?: throw ResponseStatusException(HttpStatus.NOT_FOUND)
-        if (item.trip.id != tripId) throw ResponseStatusException(HttpStatus.NOT_FOUND)
+        if (item.trip.id != command.tripId) throw ResponseStatusException(HttpStatus.NOT_FOUND)
 
-        request.category?.let { item.category = it }
-        request.amount?.let { item.amount = it }
-        request.memo?.let { item.memo = it }
+        command.category?.let { item.category = it }
+        command.amount?.let { item.amount = it }
+        command.memo?.let { item.memo = it }
 
-        return BudgetItemResponse.of(item)
+        return BudgetResult.of(item)
     }
 
-    fun delete(tripId: UUID, itemId: UUID, userId: UUID) {
-        requireEditorOrAbove(tripId, userId)
-        val item = budgetRepository.findByIdOrNull(itemId)
+    fun delete(command: BudgetCommand.Delete) {
+        requireEditorOrAbove(command.tripId, command.userId)
+        val item = budgetRepository.findByIdOrNull(command.itemId)
             ?: throw ResponseStatusException(HttpStatus.NOT_FOUND)
-        if (item.trip.id != tripId) throw ResponseStatusException(HttpStatus.NOT_FOUND)
+        if (item.trip.id != command.tripId) throw ResponseStatusException(HttpStatus.NOT_FOUND)
         budgetRepository.delete(item)
     }
 

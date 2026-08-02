@@ -40,10 +40,10 @@ FLIGHT, HOTEL, FOOD, TRANSPORT, ETC
 
 ## DTO
 
-- **`CreateBudgetRequest`**: `category` (NotNull), `amount` (Min 0), `memo?`
-- **`UpdateBudgetRequest`**: 세 필드 모두 nullable — 전달된 필드만 덮어씀
-- **`BudgetItemResponse`**: `id`, `category`, `amount`, `memo`  
-  — `BudgetItemResponse.of(item)` 정적 팩토리로 변환
+- **`BudgetRequest.Create`**: `category` (NotNull), `amount` (Min 0), `memo?`
+- **`BudgetRequest.Update`**: 세 필드 모두 nullable — 전달된 필드만 덮어씀
+- **`BudgetResult`**: `id`, `category`, `amount`, `memo` — `BudgetResult.of(item)` 정적 팩토리로 엔티티 변환
+- **`BudgetResponse`**: `id`, `category`, `amount`, `memo` — `BudgetResponse.of(result)` 정적 팩토리로 변환
 
 ---
 
