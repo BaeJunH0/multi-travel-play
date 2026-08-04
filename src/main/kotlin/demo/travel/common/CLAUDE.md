@@ -11,13 +11,14 @@
 
 ## GlobalExceptionHandler 처리 목록
 
-`@RestControllerAdvice`로 등록되며 세 종류의 예외를 처리한다.
+`@RestControllerAdvice`로 등록되며 네 종류의 예외를 처리한다.
 
 | 예외 | HTTP 상태 | 응답 형태 |
 |---|---|---|
 | `ResponseStatusException` | 예외에 명시된 상태 코드 | `ErrorResponse(code, message)` — 상태 코드를 아래 규칙으로 변환 |
 | `BusinessException` | 예외에 명시된 `status` | `ErrorResponse(code, message)` |
 | `VersionConflictException` | 409 Conflict | `{code, message, currentBlock}` |
+| `HttpMessageNotReadableException` | 400 Bad Request | `ErrorResponse("INVALID_REQUEST", "요청 본문이 올바르지 않습니다.")` — 요청 바디 파싱 실패(예: non-null 필드 누락) 시 발생 |
 
 ### HTTP 상태 코드 → 에러 코드 변환 (`toErrorCode`)
 
