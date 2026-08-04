@@ -42,8 +42,8 @@ client 내부에서만 쓰는 wire-format 파싱용 struct는 `dto/`로 승격�
 안에서 응답을 파싱하는 용도로만 쓰인다면 그 클라이언트 클래스 안에 `private data class`로 둔다.
 
 ```kotlin
-// client/OpenAiClient.kt — 외부에 노출 안 됨 → private, dto/로 옮기지 않음
-private data class ChatCompletionResponse(val choices: List<Choice>)
+// client/AnthropicClient.kt — 외부에 노출 안 됨 → private, dto/로 옮기지 않음
+private data class MessagesResponse(val content: List<ContentBlock>)
 
 // client/KakaoOAuthClient.kt — fetchUserInfo()가 공개 반환 → client/dto/KakaoUserInfo.kt
 data class KakaoUserInfo(val id: String, val email: String?, val nickname: String)

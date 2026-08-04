@@ -1,6 +1,6 @@
 package demo.travel.ai.client
 
-import demo.travel.ai.client.properties.OpenAiProperties
+import demo.travel.ai.client.properties.AnthropicProperties
 import demo.travel.ai.presentation.dto.AiBlock
 import org.springframework.http.client.JdkClientHttpRequestFactory
 import org.springframework.stereotype.Component
@@ -11,13 +11,14 @@ import java.net.http.HttpClient
 import java.time.Duration
 
 @Component
-class OpenAiClient(
-    private val props: OpenAiProperties,
+class AnthropicClient(
+    private val props: AnthropicProperties,
     private val objectMapper: ObjectMapper,
 ) {
     private val restClient = RestClient.builder()
-        .baseUrl("https://api.openai.com")
-        .defaultHeader("Authorization", "Bearer ${props.apiKey}")
+        .baseUrl("https://api.anthropic.com")
+        .defaultHeader("x-api-key", props.apiKey)
+        .defaultHeader("anthropic-version", "2023-06-01")
         .requestFactory(
             JdkClientHttpRequestFactory(
                 HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build()
@@ -28,19 +29,20 @@ class OpenAiClient(
     fun generate(userPrompt: String): List<AiBlock> {
         val body = mapOf(
             "model" to props.model,
+            "max_tokens" to MAX_TOKENS,
+            "system" to SYSTEM_PROMPT,
             "messages" to listOf(
-                mapOf("role" to "system", "content" to SYSTEM_PROMPT),
                 mapOf("role" to "user", "content" to userPrompt),
             ),
         )
 
         val response = restClient.post()
-            .uri("/v1/chat/completions")
+            .uri("/v1/messages")
             .body(body)
             .retrieve()
-            .body(ChatCompletionResponse::class.java)!!
+            .body(MessagesResponse::class.java)!!
 
-        val text = response.choices.first().message.content
+        val text = response.content.first().text
             .trim()
             .removePrefix("```json").removePrefix("```")
             .removeSuffix("```").trim()
@@ -59,9 +61,8 @@ class OpenAiClient(
         }
     }
 
-    private data class ChatCompletionResponse(val choices: List<Choice>)
-    private data class Choice(val message: Message)
-    private data class Message(val content: String)
+    private data class MessagesResponse(val content: List<ContentBlock>)
+    private data class ContentBlock(val text: String)
 
     private data class BlocksPayload(val blocks: List<RawBlock>)
     private data class RawBlock(
@@ -76,6 +77,8 @@ class OpenAiClient(
     )
 
     companion object {
+        private const val MAX_TOKENS = 4096
+
         private val SYSTEM_PROMPT = """
             당신은 여행 일정 전문가입니다.
             사용자의 조건에 맞는 여행 일정 블록을 생성하고,
