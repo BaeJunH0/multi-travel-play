@@ -48,7 +48,7 @@
 ./gradlew bootRun
 ```
 
-DB 테이블은 `src/main/resources/schema.sql` 참고.
+DB 테이블은 `src/main/resources/schema.sql` 참고. `schema.sql`은 `CREATE TABLE IF NOT EXISTS`라 기존 DB에는 반영되지 않으므로, 이미 테이블이 있는 환경이라면 `src/main/resources/migration/`의 스크립트를 날짜순으로 직접 실행해야 한다.
 
 ## 문서
 
