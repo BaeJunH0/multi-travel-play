@@ -104,13 +104,13 @@ Redis를 두 가지 용도로 사용한다.
 
 **선택 이유**
 
-- **RestClient**: Spring 6.1에서 도입된 동기 HTTP 클라이언트다. 기존 `RestTemplate`의 후속이며 fluent API를 제공한다. 비동기가 필요 없는 외부 API 호출(OpenAI, Google Places, Kakao, Google OAuth)에 적합하다.
+- **RestClient**: Spring 6.1에서 도입된 동기 HTTP 클라이언트다. 기존 `RestTemplate`의 후속이며 fluent API를 제공한다. 비동기가 필요 없는 외부 API 호출(Anthropic Claude, Google Places, Kakao, Google OAuth)에 적합하다.
 - **JdkClientHttpRequestFactory**: Java 11+에 내장된 `java.net.http.HttpClient`를 사용해 별도 라이브러리(Apache HttpClient, OkHttp) 없이 커넥션 타임아웃과 읽기 타임아웃을 설정할 수 있다. 의존성을 최소화하는 선택이다.
 - **WebClient 미선택**: WebClient는 Reactor 기반 리액티브 클라이언트로 `spring-boot-starter-webflux`를 요구한다. 이 프로젝트는 서블릿 스택(`spring-boot-starter-web`)을 사용하므로 불필요한 복잡성이 된다.
 
 **트레이드오프**
 
-- 동기 블로킹 방식이므로 OpenAI API(read timeout 30s)처럼 응답이 느린 외부 API 호출이 스레드를 점유한다. 가상 스레드 활성화 시 이 문제가 완화된다.
+- 동기 블로킹 방식이므로 Anthropic Claude API(read timeout 30s)처럼 응답이 느린 외부 API 호출이 스레드를 점유한다. 가상 스레드 활성화 시 이 문제가 완화된다.
 
 ---
 

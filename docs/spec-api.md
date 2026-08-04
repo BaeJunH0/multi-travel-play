@@ -92,7 +92,7 @@ GET /api/auth/me
 ```
 **응답**
 ```json
-{ "id": "uuid", "email": "string", "nickname": "string", "avatarColor": "string", "provider": "LOCAL | KAKAO | GOOGLE" }
+{ "id": "uuid", "email": "string", "nickname": "string", "provider": "LOCAL | KAKAO | GOOGLE" }
 ```
 
 ### 로그아웃
@@ -337,7 +337,7 @@ POST /api/trips/{tripId}/invite
 ```json
 { "shareToken": "string", "inviteUrl": "string" }
 ```
-- 재호출 시 기존 토큰 덮어씀
+- 이미 토큰이 있으면 기존 값을 그대로 사용 (재호출해도 덮어쓰지 않음)
 - 최소 권한: EDITOR
 
 ### 초대 정보 조회
@@ -383,7 +383,6 @@ GET /api/trips/{tripId}/members
   {
     "userId": "uuid",
     "nickname": "string",
-    "avatarColor": "string",
     "role": "OWNER | EDITOR | VIEWER"
   }
 ]
@@ -421,13 +420,14 @@ GET /api/trips/{tripId}/budget
 [
   {
     "id": "uuid",
-    "category": "string",
-    "description": "string",
+    "blockId": "uuid | null",
+    "category": "HOTEL | FOOD | CAFE | PLACE | TRANSPORT | FLIGHT | ETC",
     "amount": 50000,
-    "paidBy": "uuid | null"
+    "memo": "string | null"
   }
 ]
 ```
+- `blockId`가 채워진 항목은 블록 비용 변경에 연동되어 자동 생성/갱신된 항목 (아래 "블록 비용 자동 연동" 참고), `null`이면 이 API로 직접 등록한 수동 항목
 - 최소 권한: VIEWER
 
 ### 예산 항목 추가
@@ -437,20 +437,19 @@ POST /api/trips/{tripId}/budget
 **요청**
 ```json
 {
-  "category": "string",
-  "description": "string",
+  "category": "HOTEL | FOOD | CAFE | PLACE | TRANSPORT | FLIGHT | ETC",
   "amount": 50000,
-  "paidBy": "uuid | null"
+  "memo": "string | null"
 }
 ```
-**응답** `201 Created` — BudgetItem 객체
+**응답** `201 Created` — BudgetItem 객체 (`blockId`는 항상 `null`)
 - 최소 권한: EDITOR
 
 ### 예산 항목 수정
 ```
 PATCH /api/trips/{tripId}/budget/{itemId}
 ```
-**요청**: 부분 수정 가능
+**요청**: `category`, `amount`, `memo` 부분 수정 가능
 - 최소 권한: EDITOR
 
 ### 예산 항목 삭제
@@ -459,6 +458,11 @@ DELETE /api/trips/{tripId}/budget/{itemId}
 ```
 **응답** `204 No Content`
 - 최소 권한: EDITOR
+
+### 블록 비용 자동 연동
+- 블록(Block)에 `cost`가 채워지면 서버가 해당 블록에 연동된 예산 항목(`blockId`로 매칭)을 자동으로 생성하거나 `category`/`amount`/`memo`를 갱신한다.
+- 블록이 삭제되면 연동된 예산 항목도 함께 삭제된다.
+- block/budget 도메인은 서로 직접 호출하지 않고 이벤트로만 연결되며, block 저장 트랜잭션 커밋 후 별도 트랜잭션에서 처리된다(최종적 일관성).
 
 ---
 
@@ -594,6 +598,7 @@ Presence 발행:   /app/trip.{tripId}.presence
 | 401 | `UNAUTHORIZED` | 인증 토큰 없음 / 만료 |
 | 403 | `FORBIDDEN` | 권한 없음 (VIEWER가 편집 시도 등) |
 | 404 | `NOT_FOUND` | 리소스 없음 |
+| 409 | `CONFLICT` | 리소스 중복 (예: 이메일 중복 가입) |
 | 409 | `VERSION_CONFLICT` | 블록 version 불일치 |
 | 423 | `ALREADY_LOCKED` | 다른 사용자가 블록 잠금 중 |
 | 400 | `INVALID_RESET_TOKEN` | 비밀번호 재설정 코드 불일치 또는 만료 |

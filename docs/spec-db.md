@@ -7,7 +7,8 @@
 id          UUID PRIMARY KEY
 email       VARCHAR(255) UNIQUE NOT NULL
 nickname    VARCHAR(100) NOT NULL
-provider    VARCHAR(50) NOT NULL   -- GOOGLE | KAKAO
+provider    VARCHAR(50) NOT NULL   -- LOCAL | GOOGLE | KAKAO
+password    VARCHAR(255)                          -- LOCAL 전용, 소셜 로그인은 NULL
 created_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 ```
 
@@ -30,7 +31,7 @@ id            UUID PRIMARY KEY
 trip_id       UUID NOT NULL REFERENCES trips(id)
 day_number    INT NOT NULL                          -- 1, 2, 3 ...
 position      DOUBLE NOT NULL                       -- Fractional Indexing
-block_type    ENUM('HOTEL','FOOD','CAFE','PLACE','TRANSPORT') NOT NULL
+block_type    VARCHAR(20) NOT NULL                 -- block/budget 공용 enum(TripCategory) 중 HOTEL|FOOD|CAFE|PLACE|TRANSPORT만 사용
 place_name    VARCHAR(255) NOT NULL
 lat           DOUBLE
 lng           DOUBLE
@@ -50,7 +51,7 @@ updated_at    TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIM
 id         UUID PRIMARY KEY
 trip_id    UUID NOT NULL REFERENCES trips(id)
 user_id    UUID NOT NULL REFERENCES users(id)
-role       ENUM('OWNER','EDITOR','VIEWER') NOT NULL
+role       VARCHAR(20) NOT NULL                    -- OWNER | EDITOR | VIEWER
 joined_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 UNIQUE (trip_id, user_id)
 ```
@@ -59,7 +60,8 @@ UNIQUE (trip_id, user_id)
 ```sql
 id        UUID PRIMARY KEY
 trip_id   UUID NOT NULL REFERENCES trips(id)
-category  ENUM('FLIGHT','HOTEL','FOOD','TRANSPORT','ETC') NOT NULL
+block_id  UUID UNIQUE REFERENCES schedule_blocks(id) ON DELETE CASCADE   -- 연동된 block. NULL이면 수동 입력 항목
+category  VARCHAR(20) NOT NULL                  -- block과 공용 enum(TripCategory): HOTEL|FOOD|CAFE|PLACE|TRANSPORT|FLIGHT|ETC
 amount    INT NOT NULL
 memo      VARCHAR(255)
 ```

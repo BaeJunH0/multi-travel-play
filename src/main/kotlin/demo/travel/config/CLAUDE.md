@@ -17,3 +17,5 @@ Spring MVC 및 WebSocket 관련 설정을 담당하는 패키지.
 | STOMP 엔드포인트 | `/ws` (SockJS 폴백 활성화) |
 | 메시지 브로커 구독 prefix | `/topic` |
 | 클라이언트 → 서버 전송 prefix | `/app` |
+
+`/ws` 엔드포인트는 `CorsProperties.allowedOrigins`(`cors.allowed-origins` 설정값)로 `setAllowedOriginPatterns`를 제한한다. 허용되지 않은 origin의 SockJS 핸드셰이크는 403으로 차단된다.
