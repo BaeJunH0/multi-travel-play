@@ -2,6 +2,7 @@ package demo.travel.common.exception
 
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
+import org.springframework.http.converter.HttpMessageNotReadableException
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
 import org.springframework.web.server.ResponseStatusException
@@ -13,6 +14,11 @@ class GlobalExceptionHandler {
     fun handleResponseStatus(e: ResponseStatusException): ResponseEntity<ErrorResponse> =
         ResponseEntity.status(e.statusCode)
             .body(ErrorResponse(e.statusCode.value().toErrorCode(), e.reason ?: e.message))
+
+    @ExceptionHandler(HttpMessageNotReadableException::class)
+    fun handleMessageNotReadable(e: HttpMessageNotReadableException): ResponseEntity<ErrorResponse> =
+        ResponseEntity.status(HttpStatus.BAD_REQUEST)
+            .body(ErrorResponse("INVALID_REQUEST", "요청 본문이 올바르지 않습니다."))
 
     @ExceptionHandler(BusinessException::class)
     fun handleBusiness(e: BusinessException): ResponseEntity<ErrorResponse> =
