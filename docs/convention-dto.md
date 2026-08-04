@@ -1,8 +1,8 @@
 # DTO 배치 컨벤션
 
-계층 분리(`presentation` / `application` / `client`)를 적용한 도메인에서 DTO를 어느 패키지에 두고 어떻게 부를지 정하는 기준.
-`ai`, `auth` 도메인에 적용되어 있다. `block`/`budget`/`trip`/`member`/`invite`처럼 계층 분리가 없는 flat 구조 도메인은
-지금처럼 도메인 루트의 `dto/`에 요청·응답 DTO를 모아두면 된다(이 문서의 대상 아님).
+계층 분리(`presentation` / `application`, 외부 API 연동이 있는 도메인은 `client` 포함)를 적용한 도메인에서 DTO를
+어느 패키지에 두고 어떻게 부를지 정하는 기준. `ai`, `auth`, `block`, `budget`, `invite`, `member`, `trip` 도메인
+모두 이 컨벤션을 따른다.
 
 ---
 

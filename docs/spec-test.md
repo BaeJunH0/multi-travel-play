@@ -1,6 +1,6 @@
 # spec-test.md — 테스트 전략 및 명세
 
-> 작성 기준일: 2026-06-14
+> 작성 기준일: 2026-08-04
 
 ---
 
@@ -194,9 +194,17 @@ spring:
 | 파일 | 대상 | 시나리오 수 |
 |------|------|------------|
 | `user/UserTest.kt` | `User.changePassword()` | 3 |
-| `trip/TripDetailResponseTest.kt` | `TripDetailResponse.of()` | 3 |
-| `block/BlockResponseTest.kt` | `BlockResponse.of()` | 5 |
+| `trip/TripResultTest.kt` | `TripResult.Detail.of()` | 3 |
+| `block/BlockResultTest.kt` | `BlockResult.of()` | 5 |
 | `common/ExceptionTest.kt` | `BusinessException`, `VersionConflictException` | 5 |
+| `common/GlobalExceptionHandlerTest.kt` | `GlobalExceptionHandler.handleMessageNotReadable` | 1 |
+| `budget/BlockBudgetSyncListenerTest.kt` | `BlockBudgetSyncListener` | 4 |
+
+### 기타 통합 테스트
+
+| 파일 | 대상 | 방식 |
+|------|------|------|
+| `config/WebSocketConfigTest.kt` | `WebSocketConfig`의 `/ws` origin 허용 목록 | `@SpringBootTest(RANDOM_PORT)` + 실제 HTTP 요청 |
 
 ---
 
@@ -360,7 +368,7 @@ spring:
 | 소셜 유저 (password=null) | changePassword 호출 | password 새로 설정 |
 | 기존 비밀번호 있는 유저 | 재호출 | 이전 값 덮어씀 |
 
-### 6-12. TripDetailResponse.of()
+### 6-12. TripResult.of()
 
 | given | when | then |
 |-------|------|------|
@@ -368,7 +376,7 @@ spring:
 | of() | 당일치기 (start==end) | days 1개 |
 | of() | 필드 매핑 전체 확인 | id·title·role·memberCount 정확 반영 |
 
-### 6-13. BlockResponse.of()
+### 6-13. BlockResult.of()
 
 | given | when | then |
 |-------|------|------|
@@ -387,6 +395,28 @@ spring:
 | BusinessException | 404 NOT_FOUND | status = NOT_FOUND |
 | VersionConflictException | currentBlock 전달 | 메시지 고정, currentBlock 포함 |
 | VersionConflictException | 타입 확인 | RuntimeException 상속 |
+
+### 6-15. GlobalExceptionHandlerTest
+
+| given | when | then |
+|-------|------|------|
+| HttpMessageNotReadableException | 요청 바디 파싱 실패 | 400 + `ErrorResponse("INVALID_REQUEST", "요청 본문이 올바르지 않습니다.")` |
+
+### 6-16. BlockBudgetSyncListenerTest
+
+| given | when | then |
+|-------|------|------|
+| onCostChanged | 연동된 BudgetItem 없음 | blockId로 연결된 새 BudgetItem 생성 |
+| onCostChanged | 연동된 BudgetItem 이미 있음 | category/amount/memo 갱신 (save 재호출 없음) |
+| onBlockDeleted | 연동된 BudgetItem 있음 | 해당 BudgetItem 삭제 |
+| onBlockDeleted | 연동된 BudgetItem 없음 | 아무 일도 일어나지 않음 |
+
+### 6-17. WebSocketConfigTest
+
+| given | when | then |
+|-------|------|------|
+| SockJS `/ws/info` 핸드셰이크 | 허용된 origin(`cors.allowed-origins`) | 200 |
+| SockJS `/ws/info` 핸드셰이크 | 허용되지 않은 origin | 403 |
 
 ---
 
