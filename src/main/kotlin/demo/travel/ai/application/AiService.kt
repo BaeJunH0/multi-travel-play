@@ -1,7 +1,7 @@
 package demo.travel.ai.application
 
+import demo.travel.ai.client.AnthropicClient
 import demo.travel.ai.client.GooglePlacesClient
-import demo.travel.ai.client.OpenAiClient
 import demo.travel.ai.presentation.dto.AiRequest
 import demo.travel.ai.presentation.dto.AppliedBlock
 import demo.travel.ai.presentation.dto.ApplyResponse
@@ -27,7 +27,7 @@ import java.util.UUID
 
 @Service
 class AiService(
-    private val openAiClient: OpenAiClient,
+    private val anthropicClient: AnthropicClient,
     private val placesClient: GooglePlacesClient,
     private val tripRepository: TripRepository,
     private val tripMemberRepository: TripMemberRepository,
@@ -42,7 +42,7 @@ class AiService(
         val totalDays = ChronoUnit.DAYS.between(trip.startDate, trip.endDate).toInt() + 1
         val prompt = buildPrompt(trip.destination, trip.startDate.toString(), trip.endDate.toString(), totalDays, request)
 
-        val blocks = openAiClient.generate(prompt)
+        val blocks = anthropicClient.generate(prompt)
         return GenerateResponse(blocks)
     }
 

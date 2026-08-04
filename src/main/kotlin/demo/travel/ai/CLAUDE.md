@@ -1,6 +1,6 @@
 # ai 패키지
 
-OpenAI API를 통해 여행 일정 블록을 AI로 생성하고, 사용자가 선택한 블록을 DB에 저장하는 패키지.
+Anthropic Claude API를 통해 여행 일정 블록을 AI로 생성하고, 사용자가 선택한 블록을 DB에 저장하는 패키지.
 
 ---
 
@@ -28,7 +28,7 @@ OpenAI API를 통해 여행 일정 블록을 AI로 생성하고, 사용자가 �
 1. 요청자가 해당 trip의 EDITOR 이상인지 확인 (`requireEditorOrAbove`)
 2. trip의 `destination`, `startDate`, `endDate`로 `buildPrompt` 생성
    - `tags` 비어있으면 "전체", `targetDays` 비어있으면 "전체"로 프롬프트에 포함
-3. `OpenAiClient.generate(prompt)` → OpenAI `gpt-*` 모델 호출
+3. `AnthropicClient.generate(prompt)` → Anthropic `claude-*` 모델 호출
    - System prompt: 순수 JSON만 반환하도록 지시
    - 응답에서 마크다운 코드블록 제거 후 `blocks` 배열 파싱
 4. `GenerateResponse(blocks)` 반환 (서버에 아무것도 저장하지 않음)
@@ -77,7 +77,7 @@ private fun requireEditorOrAbove(tripId: UUID, userId: UUID) {
 
 | 의존성 | 용도 | 설정 키 | 타임아웃 |
 |--------|------|---------|---------|
-| OpenAI API | `POST /v1/chat/completions` — 일정 블록 생성 | `ai.openai.api-key`, `ai.openai.model` (`OpenAiProperties`) | connect 10s / read **30s** |
+| Anthropic Claude API | `POST /v1/messages` — 일정 블록 생성 | `ai.anthropic.api-key`, `ai.anthropic.model` (`AnthropicProperties`) | connect 10s / read **30s** |
 | Google Places API | `findplacefromtext` — `placeName`으로 `lat/lng` 조회 | `google.places.api-key` | connect 5s / read 10s |
 
 모든 HTTP 클라이언트는 `RestClient` + `JdkClientHttpRequestFactory` 기반 (동기 블로킹).
@@ -87,12 +87,12 @@ private fun requireEditorOrAbove(tripId: UUID, userId: UUID) {
 
 ## 구현 세부 사항
 
-### OpenAiClient 응답 파싱
+### AnthropicClient 응답 파싱
 
-OpenAI 응답은 private data class로 타입 안전하게 역직렬화한다.
+Anthropic 응답은 private data class로 타입 안전하게 역직렬화한다.
 
 ```
-ChatCompletionResponse → choices[0].message.content (String)
+MessagesResponse → content[0].text (String)
   → 마크다운 코드블록 제거 후
 BlocksPayload → blocks: List<RawBlock>
   → AiBlock으로 변환

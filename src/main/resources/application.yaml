@@ -57,9 +57,9 @@ jwt:
   refresh-token-expiry: 604800000
 
 ai:
-  openai:
-    api-key: ${OPENAI_API_KEY}
-    model: gpt-4o
+  anthropic:
+    api-key: ${ANTHROPIC_API_KEY}
+    model: claude-sonnet-5
 
 google:
   places:
