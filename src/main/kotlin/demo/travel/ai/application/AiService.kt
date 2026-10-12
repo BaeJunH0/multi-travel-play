@@ -49,6 +49,9 @@ class AiService(
     @Transactional
     fun apply(tripId: UUID, request: AiRequest.ApplyRequest, user: User): ApplyResponse {
         requireEditorOrAbove(tripId, user.id)
+        request.selectedBlocks.firstOrNull { !it.blockType.isBlockType }?.let {
+            throw ResponseStatusException(HttpStatus.BAD_REQUEST, "블록에 사용할 수 없는 카테고리입니다: ${it.blockType}")
+        }
 
         val trip = tripRepository.findByIdOrNull(tripId)
             ?: throw ResponseStatusException(HttpStatus.NOT_FOUND)

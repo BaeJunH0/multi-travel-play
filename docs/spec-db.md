@@ -31,7 +31,7 @@ id            UUID PRIMARY KEY
 trip_id       UUID NOT NULL REFERENCES trips(id)
 day_number    INT NOT NULL                          -- 1, 2, 3 ...
 position      DOUBLE NOT NULL                       -- Fractional Indexing
-block_type    VARCHAR(20) NOT NULL                 -- block/budget 공용 enum(TripCategory): HOTEL|FOOD|CAFE|PLACE|TRANSPORT|FLIGHT|ETC
+block_type    VARCHAR(20) NOT NULL                 -- block/budget 공용 enum(TripCategory) 중 HOTEL|FOOD|CAFE|PLACE|TRANSPORT만 사용 (서비스에서 검증)
 place_name    VARCHAR(255) NOT NULL
 lat           DOUBLE
 lng           DOUBLE

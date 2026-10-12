@@ -176,8 +176,9 @@ spring:
 | `auth/AuthServiceTest.kt` | `AuthService` | 13 |
 | `auth/PasswordResetServiceTest.kt` | `PasswordResetService` | 7 |
 | `trip/TripServiceTest.kt` | `TripService` | 14 |
-| `block/BlockServiceTest.kt` | `BlockService` | 21 |
+| `block/BlockServiceTest.kt` | `BlockService` | 24 |
 | `budget/BudgetServiceTest.kt` | `BudgetService` | 10 |
+| `ai/AiServiceTest.kt` | `AiService.apply` | 3 |
 | `invite/InviteServiceTest.kt` | `InviteService` | 9 |
 | `member/MemberServiceTest.kt` | `MemberService` | 13 |
 
@@ -271,6 +272,7 @@ spring:
 | addBlock | EDITOR, 기존 블록 있음 | `lastPosition + 1.0`으로 저장 |
 | addBlock | EDITOR, 첫 번째 블록 | `position = 1.0`으로 저장 |
 | addBlock | VIEWER | 403 FORBIDDEN |
+| addBlock | block에 쓰지 않는 카테고리(FLIGHT) | 400 BAD_REQUEST, 저장 안 함 |
 | updateBlock | 잠금 없음 + version 일치 | 필드 수정 반영, cost 미포함이라 이벤트 미발행 |
 | updateBlock | cost 변경 | `BlockCostChangedEvent` 발행 |
 | updateBlock | version 불일치 | `VersionConflictException` (현재 블록 포함) |
@@ -281,12 +283,22 @@ spring:
 | moveBlock | version 불일치 | `VersionConflictException` |
 | deleteBlock | EDITOR | 삭제 실행 |
 | deleteBlock | VIEWER | 403 FORBIDDEN |
+| deleteBlock | 타인이 잠금 | 423 LOCKED, 삭제·이벤트 없음 |
+| deleteBlock | 본인이 잠금 | 삭제 실행 |
 | lockBlock | 잠금 없음 | lockedBy = 본인 |
 | lockBlock | 본인이 이미 잠금 | 정상 반환 |
 | lockBlock | 타인이 잠금 | 423 LOCKED |
 | unlockBlock | 본인 잠금 | lockedBy = null |
 | unlockBlock | 타인 잠금 | lockedBy 유지 (무변경) |
 | reorderBlocks | Day별 복수 블록 | Day 내 1.0, 2.0, 3.0 ... 재정규화 |
+
+### 6-3-1. AiService.apply
+
+| given | when | then |
+|-------|------|------|
+| apply | block용 카테고리만 선택 | 모두 저장, tempId echo, lat/lng 보강 |
+| apply | block에 쓰지 않는 카테고리(ETC) 포함 | 400 BAD_REQUEST, 아무것도 저장 안 함 |
+| apply | VIEWER | 403 FORBIDDEN |
 
 ### 6-4. BudgetService
 

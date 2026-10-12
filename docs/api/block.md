@@ -13,7 +13,7 @@ GET /api/trips/{tripId}/blocks
     "id": "uuid",
     "dayNumber": 1,
     "position": 1.0,
-    "blockType": "HOTEL | FOOD | CAFE | PLACE | TRANSPORT | FLIGHT | ETC",
+    "blockType": "HOTEL | FOOD | CAFE | PLACE | TRANSPORT",
     "placeName": "string",
     "lat": "number | null",
     "lng": "number | null",
@@ -45,7 +45,7 @@ POST /api/trips/{tripId}/blocks
 }
 ```
 **응답** `201 Created` — Block 객체 (`position` 은 해당 day 마지막 + 1.0 자동 설정)
-- `blockType`은 block/budget 공용 enum(`TripCategory`) 7종 모두 허용 (`FLIGHT`, `ETC` 포함)
+- `blockType`은 `HOTEL | FOOD | CAFE | PLACE | TRANSPORT`만 허용. budget 전용 카테고리(`FLIGHT`, `ETC`)는 `400 INVALID_REQUEST`
 - 최소 권한: EDITOR
 
 ### 블록 수정
@@ -96,7 +96,8 @@ PATCH /api/trips/{tripId}/blocks/{blockId}/move
 DELETE /api/trips/{tripId}/blocks/{blockId}
 ```
 **응답** `204 No Content`
-- 잠금 여부는 확인하지 않음 (다른 사용자가 잠근 블록도 삭제 가능)
+**에러**: 다른 사용자가 잠금 중이면 `423 ALREADY_LOCKED`
+- version은 확인하지 않음
 - 최소 권한: EDITOR
 
 ### Position 재정규화

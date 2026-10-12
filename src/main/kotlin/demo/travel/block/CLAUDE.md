@@ -45,7 +45,7 @@ checkVersion(block, command.version)  // version 불일치 → VersionConflictEx
 - `unlockBlock`: `lockedBy`가 본인일 때만 null로 해제 (다른 사용자 잠금은 건드리지 않음).
 - `updateBlock`은 잠금 체크(`checkLock`)도 수행한다 — 다른 사용자가 잠근 블록은 수정 불가.
 - `moveBlock`은 잠금 체크 없이 version 체크만 수행한다.
-- `deleteBlock`은 잠금·version 체크 없이 삭제한다.
+- `deleteBlock`은 잠금 체크(`checkLock`)를 수행한다 — 다른 사용자가 잠근 블록은 삭제 불가(423). version 체크는 하지 않는다.
 - `unlockBlock`은 멤버십·역할 체크를 하지 않는다 (블록이 해당 trip 소속인지만 확인).
 
 ---
@@ -58,7 +58,7 @@ checkVersion(block, command.version)  // version 불일치 → VersionConflictEx
 | `trip` | Trip (ManyToOne, LAZY) | 소속 여행 |
 | `dayNumber` | Int | 여행 일차 (1, 2, 3 ...) |
 | `position` | Double | Fractional Indexing 순서값 |
-| `blockType` | TripCategory (`demo.travel.common`) | block/budget 공용 enum. 요청 검증에서 값을 제한하지 않으므로 `FLIGHT`, `ETC`를 포함한 7종 모두 저장 가능 |
+| `blockType` | TripCategory (`demo.travel.common`) | block/budget 공용 enum. block에서는 `HOTEL / FOOD / CAFE / PLACE / TRANSPORT`만 사용 — `addBlock`이 `TripCategory.isBlockType`으로 검증해 `FLIGHT`, `ETC`는 400 |
 | `placeName` | String | 장소명 (필수) |
 | `lat`, `lng` | Double? | 좌표 (AI 일정 적용 시 Google Places로 보강, null 허용) |
 | `startTime` | LocalTime? | 방문 시작 시각 |

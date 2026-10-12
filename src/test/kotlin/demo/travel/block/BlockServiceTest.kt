@@ -126,6 +126,18 @@ class BlockServiceTest : BehaviorSpec({
                 ex.statusCode shouldBe HttpStatus.FORBIDDEN
             }
         }
+
+        `when`("block에 쓰지 않는 카테고리(FLIGHT)일 때") {
+            then("400 BAD_REQUEST를 던지고 저장하지 않는다") {
+                every { tripMemberRepository.findByTripIdAndUserId(tripId, userId) } returns memberWith(TripRole.EDITOR)
+
+                val ex = shouldThrow<ResponseStatusException> {
+                    service.addBlock(command.copy(blockType = TripCategory.FLIGHT))
+                }
+                ex.statusCode shouldBe HttpStatus.BAD_REQUEST
+                verify(exactly = 0) { blockRepository.save(any()) }
+            }
+        }
     }
 
     given("updateBlock") {
@@ -248,6 +260,32 @@ class BlockServiceTest : BehaviorSpec({
 
                 verify { blockRepository.delete(block) }
                 verify { eventPublisher.publishEvent(match<Any> { it is BlockDeletedEvent && it.blockId == blockId }) }
+            }
+        }
+
+        `when`("다른 사용자가 잠근 블록일 때") {
+            then("423 LOCKED를 던지고 삭제하지 않는다") {
+                val block = makeBlock(lockedBy = otherUser)
+                every { tripMemberRepository.findByTripIdAndUserId(tripId, userId) } returns memberWith(TripRole.EDITOR)
+                every { blockRepository.findByIdOrNull(blockId) } returns block
+
+                val ex = shouldThrow<ResponseStatusException> { service.deleteBlock(tripId, blockId, userId) }
+                ex.statusCode.value() shouldBe 423
+                verify(exactly = 0) { blockRepository.delete(any()) }
+                verify(exactly = 0) { eventPublisher.publishEvent(any()) }
+            }
+        }
+
+        `when`("본인이 잠근 블록일 때") {
+            then("블록을 삭제한다") {
+                val block = makeBlock(lockedBy = user)
+                every { tripMemberRepository.findByTripIdAndUserId(tripId, userId) } returns memberWith(TripRole.EDITOR)
+                every { blockRepository.findByIdOrNull(blockId) } returns block
+                every { blockRepository.delete(block) } just Runs
+
+                service.deleteBlock(tripId, blockId, userId)
+
+                verify { blockRepository.delete(block) }
             }
         }
 

@@ -38,6 +38,7 @@ Anthropic Claude API를 통해 여행 일정 블록을 AI로 생성하고, 사�
 `@Transactional` 적용.
 
 1. 요청자 권한 확인 (`requireEditorOrAbove`)
+   - `selectedBlocks` 중 block용 카테고리(`TripCategory.isBlockType`)가 아닌 항목이 있으면 아무것도 저장하지 않고 `400`
 2. Trip 조회 → 없으면 `404`
 3. `selectedBlocks` 각 항목마다 `GooglePlacesClient.findLatLng(placeName)` 호출 → `lat/lng` 보강
    - Places API 실패 또는 결과 없으면 `null` 허용 (warn 로그 후 계속 진행)
