@@ -31,6 +31,9 @@ data class TripEvent(
 
         fun conflict(tripId: UUID, block: BlockResponse) =
             TripEvent(Action.CONFLICT, tripId, ConflictPayload(block.id, block))
+
+        fun presence(tripId: UUID, users: List<PresenceUser>) =
+            TripEvent(Action.PRESENCE, tripId, mapOf("users" to users))
     }
 }
 

@@ -180,6 +180,8 @@ spring:
 | `budget/BudgetServiceTest.kt` | `BudgetService` | 10 |
 | `ai/AiServiceTest.kt` | `AiService.apply` | 3 |
 | `block/BlockControllerTest.kt` | `BlockController` 충돌 브로드캐스트 | 3 |
+| `websocket/PresenceStoreTest.kt` | `PresenceStore.leaveSession` | 4 |
+| `websocket/PresenceDisconnectListenerTest.kt` | `PresenceDisconnectListener` | 2 |
 | `invite/InviteServiceTest.kt` | `InviteService` | 9 |
 | `member/MemberServiceTest.kt` | `MemberService` | 13 |
 
@@ -308,6 +310,17 @@ spring:
 | updateBlock | version 충돌 | `CONFLICT` 브로드캐스트, `VersionConflictException` 재전파, `UPDATE` 미발행 |
 | updateBlock | 정상 수정 | `UPDATE`만 브로드캐스트 |
 | moveBlock | version 충돌 | `CONFLICT` 브로드캐스트, `VersionConflictException` 재전파, `MOVE` 미발행 |
+
+### 6-3-3. PresenceStore / PresenceDisconnectListener
+
+| given | when | then |
+|-------|------|------|
+| leaveSession | 유저의 유일한 세션 끊김 | presence에서 제거, tripId 반환 |
+| leaveSession | 같은 유저의 다른 세션이 남음 | presence 유지, null (마지막 세션 끊길 때 제거) |
+| leaveSession | 등록되지 않은 세션 | 변화 없음, null |
+| leaveSession | 같은 trip의 다른 유저 끊김 | 그 유저만 제거 |
+| onDisconnect | 마지막 세션 끊김 | 남은 목록으로 `PRESENCE` 브로드캐스트 |
+| onDisconnect | 등록되지 않은 세션 | 발행 없음 |
 
 ### 6-4. BudgetService
 
