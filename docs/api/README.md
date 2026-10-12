@@ -5,6 +5,7 @@
 - Base URL: `/api`
 - 인증: `Authorization: Bearer {accessToken}` (명시된 예외 제외 모든 엔드포인트)
 - Content-Type: `application/json`
+- CORS: `cors.allowed-origins`에 등록된 origin만 허용 (credentials 포함). 허용되지 않은 origin의 preflight는 `403`
 - 에러 응답 형식:
   ```json
   { "code": "ERROR_CODE", "message": "설명" }
