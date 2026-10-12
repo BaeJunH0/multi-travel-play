@@ -66,7 +66,7 @@ PATCH /api/trips/{tripId}/blocks/{blockId}
 **응답** — 수정된 Block 객체
 
 **에러**
-- version 불일치 시 `409`
+- version 불일치 시 `409` (같은 여행 접속자에게 `CONFLICT` 이벤트도 브로드캐스트)
 ```json
 { "code": "VERSION_CONFLICT", "message": "string", "currentBlock": { } }
 ```
@@ -87,7 +87,7 @@ PATCH /api/trips/{tripId}/blocks/{blockId}/move
 ```
 **응답** — 이동된 Block 객체
 
-**에러**: version 불일치 시 `409 VERSION_CONFLICT`
+**에러**: version 불일치 시 `409 VERSION_CONFLICT` (+ `CONFLICT` 이벤트 브로드캐스트)
 - 잠금 여부는 확인하지 않음 (다른 사용자가 잠근 블록도 이동 가능)
 - 최소 권한: EDITOR
 
