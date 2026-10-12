@@ -23,8 +23,9 @@ class PasswordResetService(
     private val passwordEncoder = BCryptPasswordEncoder()
 
     fun requestReset(email: String) {
-        // 사용자 존재 여부와 무관하게 같은 응답 (이메일 열거 공격 방지)
+        // 미가입·소셜 계정 여부와 무관하게 같은 응답 (이메일 열거 공격 방지)
         val user = userRepository.findByEmail(email) ?: return
+        if (user.provider != AuthProvider.LOCAL) return
 
         val code = (100_000..999_999).random().toString()
         redisTemplate.opsForValue().set(resetKey(email), code, 15, TimeUnit.MINUTES)
@@ -50,17 +51,12 @@ class PasswordResetService(
 
     @Transactional
     fun confirmReset(command: PasswordResetCommand.Confirm): String {
-        val user = userRepository.findByEmail(command.email)
-            ?: throw BusinessException("USER_NOT_FOUND", "존재하지 않는 이메일입니다.")
-
-        if (user.provider != AuthProvider.LOCAL) {
-            throw BusinessException("SOCIAL_ACCOUNT", "소셜 로그인 계정은 비밀번호를 변경할 수 없습니다.")
-        }
-
+        // 실패 사유(미가입·소셜 계정·코드 불일치)를 구분하지 않는다 (이메일 열거 공격 방지)
         val stored = redisTemplate.opsForValue().get(resetKey(command.email))
-        if (stored == null || stored != command.token) {
-            throw BusinessException("INVALID_RESET_TOKEN", "인증 코드가 올바르지 않거나 만료됐습니다.")
-        }
+        if (stored == null || stored != command.token) throw invalidResetToken()
+
+        val user = userRepository.findByEmail(command.email) ?: throw invalidResetToken()
+        if (user.provider != AuthProvider.LOCAL) throw invalidResetToken()
 
         user.changePassword(passwordEncoder.encode(command.newPassword)!!)
         redisTemplate.delete(resetKey(command.email))
@@ -69,4 +65,7 @@ class PasswordResetService(
     }
 
     private fun resetKey(email: String) = "password-reset:$email"
+
+    private fun invalidResetToken() =
+        BusinessException("INVALID_RESET_TOKEN", "인증 코드가 올바르지 않거나 만료됐습니다.")
 }

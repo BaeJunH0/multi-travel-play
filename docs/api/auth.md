@@ -101,8 +101,7 @@ POST /api/auth/password-reset/request
 ```
 **응답** `200 OK`
 - 이메일로 6자리 인증 코드 발송, Redis에 15분간 보관
-- 가입되지 않은 이메일이어도 동일하게 `200 OK` (이메일 열거 방지)
-- 소셜 로그인 계정(Kakao/Google)도 코드는 발송되지만, 확인 단계에서 `400 SOCIAL_ACCOUNT`로 거부됨
+- LOCAL 계정에만 코드를 발송한다. 가입되지 않은 이메일이나 소셜 로그인 계정(Kakao/Google)이면 코드 저장·메일 발송 없이 똑같이 `200 OK` (이메일 열거 방지)
 - 인증 불필요
 
 ### 비밀번호 재설정 확인
@@ -117,8 +116,6 @@ POST /api/auth/password-reset/confirm
 ```json
 { "accessToken": "string" }
 ```
-**에러**
-- 가입되지 않은 이메일: `400 USER_NOT_FOUND`
-- 소셜 로그인 계정: `400 SOCIAL_ACCOUNT`
-- 코드 불일치/만료: `400 INVALID_RESET_TOKEN`
+**에러**: 코드 불일치/만료 시 `400 INVALID_RESET_TOKEN`
+- 가입되지 않은 이메일, 소셜 로그인 계정도 같은 `400 INVALID_RESET_TOKEN`으로 응답한다 (가입 여부·가입 경로 비노출)
 - 인증 불필요
