@@ -62,7 +62,9 @@ GET /api/trips/{tripId}
 ```
 PATCH /api/trips/{tripId}
 ```
-**요청**: `title`, `destination`, `startDate`, `endDate` 부분 수정 가능
+**요청**: `title`, `destination`, `startDate`, `endDate` 부분 수정 가능 (전달된 필드만 반영)
+
+**응답** — TripDetail 객체
 - 최소 권한: EDITOR
 
 ### 여행 삭제

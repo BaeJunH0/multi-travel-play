@@ -17,7 +17,7 @@
 ## 초대 흐름
 
 1. **링크 생성** — EDITOR 이상 권한을 가진 멤버가 `POST /api/trips/{tripId}/invite` 호출
-   - `shareToken`과 `inviteUrl`(`{baseUrl}/invite/{token}`) 반환
+   - `shareToken`과 `inviteUrl`(`{frontend.url}/invite/{token}`) 반환
 2. **링크 공유** — 수신자가 브라우저에서 초대 URL 접근
 3. **초대 정보 조회** — 프론트가 `GET /api/invite/{shareToken}`으로 여행 미리보기 표시 (비인증)
 4. **수락** — 로그인한 사용자가 `POST /api/invite/{shareToken}/accept` 호출
@@ -36,7 +36,6 @@ trip.shareToken = token
 
 - `Trip` 엔티티의 `shareToken` 컬럼에 저장된다.
 - **이미 토큰이 존재하면 기존 값을 그대로 사용**한다(재호출 시 덮어쓰지 않음).
-  - 스펙 문서에는 "재호출 시 기존 토큰 덮어씀"이라고 기재되어 있으나, 구현은 기존 토큰을 유지하는 방식이다.
 - 토큰 형식: UUID에서 하이픈 제거 후 앞 16자리 (예: `a1b2c3d4e5f60708`).
 
 ### 수락 멱등성

@@ -8,6 +8,13 @@ Spring MVC 및 WebSocket 관련 설정을 담당하는 패키지.
 
 - `CurrentUserArgumentResolver` 등록 — 컨트롤러 메서드 파라미터에서 현재 인증된 사용자를 자동 주입할 때 사용.
 
+## Properties
+
+| 클래스 | prefix | 용도 |
+|---|---|---|
+| `CorsProperties` | `cors` | `allowed-origins` — WebSocket `/ws` 허용 origin 목록 |
+| `FrontendProperties` | `frontend` | `url` — 초대 링크(`inviteUrl`) 생성 시 base URL |
+
 ## WebSocketConfig
 
 `@EnableWebSocketMessageBroker`로 STOMP 기반 WebSocket을 활성화한다.

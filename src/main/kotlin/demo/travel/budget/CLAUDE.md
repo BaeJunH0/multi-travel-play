@@ -66,7 +66,7 @@ HOTEL, FOOD, CAFE, PLACE, TRANSPORT, FLIGHT, ETC
 
 ### Partial Update
 
-`UpdateBudgetRequest`의 각 필드는 nullable이며, non-null인 필드만 `let` 블록으로 엔티티에 반영한다. 별도의 save 호출 없이 `@Transactional` 범위 내 dirty checking으로 반영된다.
+`BudgetRequest.Update`(→ `BudgetCommand.Update`)의 각 필드는 nullable이며, non-null인 필드만 `let` 블록으로 엔티티에 반영한다. 별도의 save 호출 없이 `@Transactional` 범위 내 dirty checking으로 반영된다.
 
 ### block 연동 (blockId)
 

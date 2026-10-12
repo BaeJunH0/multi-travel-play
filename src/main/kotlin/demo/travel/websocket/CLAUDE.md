@@ -38,10 +38,10 @@
 | `DELETE` | 블록 삭제 | `{ blockId }` |
 | `LOCK` | 잠금 획득 | `{ blockId, lockedBy, lockedByNickname }` |
 | `UNLOCK` | 잠금 해제 | `{ blockId }` |
-| `CONFLICT` | version 충돌 | `{ blockId, currentBlock: BlockResponse }` |
+| `CONFLICT` | version 충돌 (**현재 미발행**) | `{ blockId, currentBlock: BlockResponse }` |
 | `PRESENCE` | 접속자 변경 | `{ users: [{ userId, nickname, avatarColor, activeDay }] }` |
 
-**충돌 처리 흐름**: 클라이언트가 Optimistic Update를 적용한 뒤 `CONFLICT` 이벤트를 수신하면 `currentBlock`(서버 최신 상태)으로 롤백한다. REST `409` 응답과 동시에 `CONFLICT` 이벤트가 브로드캐스트된다.
+**충돌 처리 흐름**: version 불일치 시 REST `409 VERSION_CONFLICT` 응답 body의 `currentBlock`(서버 최신 상태)으로 클라이언트가 롤백한다. `CONFLICT` action과 `TripEvent.conflict()` 팩토리는 정의되어 있지만 **현재 호출하는 곳이 없어 브로드캐스트되지 않는다**.
 
 ---
 
@@ -54,7 +54,7 @@ store: Map<tripId, Map<userId, PresenceUser>>
 ```
 
 - **join**: 클라이언트가 `/app/trip.{tripId}.presence` 로 메시지를 보내면 `PresenceController`가 `presenceStore.join()` 을 호출해 유저 정보를 upsert한다.
-- **leave**: `presenceStore.leave(tripId, userId)` 로 제거한다 (현재 WebSocket disconnect 훅에서 호출 예정).
+- **leave**: `presenceStore.leave(tripId, userId)` 메서드는 있지만 **현재 호출하는 곳이 없다** (WebSocket disconnect 훅 미구현). 한 번 join한 유저는 서버 재시작 전까지 목록에 남는다.
 - join 이후 즉시 해당 trip 전체 접속자 목록을 `PRESENCE` 이벤트로 브로드캐스트한다.
 
 **Presence 요청 형식** (클라이언트 → 서버):
@@ -73,8 +73,8 @@ store: Map<tripId, Map<userId, PresenceUser>>
 
 ## 이벤트 발행 주체
 
-`BlockController` (및 `LockController`) → `TripEventPublisher.publish(tripId, event)`
+`BlockController`(잠금 포함), `PresenceController` → `TripEventPublisher.publish(tripId, event)`
 
 `TripEventPublisher` 는 `SimpMessagingTemplate.convertAndSend("/topic/trip.{tripId}", event)` 를 래핑한 단순 컴포넌트다. 직접 `SimpMessagingTemplate` 를 쓰지 말고 반드시 `TripEventPublisher` 를 통해 발행한다.
 
-`TripEvent` 의 팩토리 메서드(`add`, `update`, `move`, `delete`, `lock`, `unlock`, `conflict`)를 사용해 이벤트를 생성한다. payload 타입은 `TripEvent.kt` 내 sealed data class들로 고정되어 있다.
+`TripEvent` 의 팩토리 메서드(`add`, `update`, `move`, `delete`, `lock`, `unlock`, `conflict`)를 사용해 이벤트를 생성한다. payload 타입은 `TripEvent.kt` 내 top-level data class(`UpdatePayload`, `MovePayload`, `LockPayload`, `ConflictPayload`)와 `mapOf("blockId" to ...)`(DELETE/UNLOCK)로 구성된다. `TripEvent.payload` 자체는 `Any` 타입이다.
