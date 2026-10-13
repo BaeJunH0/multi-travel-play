@@ -1,5 +1,6 @@
 import axios from 'axios'
 import api from './api'
+import type { User } from '../types'
 
 export const authApi = {
   // 이메일 로그인
@@ -18,6 +19,9 @@ export const authApi = {
   // refreshToken(HttpOnly 쿠키)으로 accessToken 재발급
   refresh: () =>
     axios.post<{ accessToken: string }>('/api/auth/refresh'),
+
+  // 현재 로그인 유저 조회
+  me: () => api.get<User>('/auth/me'),
 
   // 로그아웃
   logout: () => api.post('/auth/logout'),
