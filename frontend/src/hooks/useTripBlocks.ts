@@ -39,8 +39,8 @@ export function useTripBlocks(tripId: string, initial: Block[]) {
         ))
         break
       case 'CONFLICT':
+        // 요청자에게는 409 응답에서 이미 토스트를 띄우므로 여기서는 상태만 동기화한다
         setBlocks((prev) => prev.map((b) => b.id === p.blockId ? p.currentBlock : b))
-        toast.error('다른 사용자가 수정했습니다. 최신 내용으로 되돌렸어요.')
         break
     }
   }, [])
@@ -63,8 +63,9 @@ export function useTripBlocks(tripId: string, initial: Block[]) {
       const { data: updated } = await blockApi.updateBlock(tripId, blockId, { ...patch, version: prev.version })
       setBlocks((cur) => cur.map((b) => b.id === blockId ? updated : b))
     } catch (err: any) {
-      if (err.response?.status === 409) {
-        setBlocks((cur) => cur.map((b) => b.id === blockId ? prev : b))
+      if (err.response?.data?.code === 'VERSION_CONFLICT') {
+        const latest: Block = err.response.data.currentBlock ?? prev
+        setBlocks((cur) => cur.map((b) => b.id === blockId ? latest : b))
         toast.error('다른 사용자가 수정했습니다. 최신 내용으로 되돌렸어요.')
       } else {
         setBlocks((cur) => cur.map((b) => b.id === blockId ? prev : b))
@@ -88,8 +89,9 @@ export function useTripBlocks(tripId: string, initial: Block[]) {
         i === 0 ? min : Math.min(min, b.position - dayBlocks[i - 1].position), Infinity)
       if (minGap < 1e-4) await blockApi.reorder(tripId)
     } catch (err: any) {
-      if (err.response?.status === 409) {
-        setBlocks((cur) => cur.map((b) => b.id === blockId ? prev : b))
+      if (err.response?.data?.code === 'VERSION_CONFLICT') {
+        const latest: Block = err.response.data.currentBlock ?? prev
+        setBlocks((cur) => cur.map((b) => b.id === blockId ? latest : b))
         toast.error('다른 사용자가 수정했습니다.')
       } else {
         setBlocks((cur) => cur.map((b) => b.id === blockId ? prev : b))
