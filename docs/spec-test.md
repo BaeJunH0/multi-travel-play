@@ -206,6 +206,7 @@ spring:
 | 파일 | 대상 | 방식 |
 |------|------|------|
 | `config/WebSocketConfigTest.kt` | `WebSocketConfig`의 `/ws` origin 허용 목록 | `@SpringBootTest(RANDOM_PORT)` + 실제 HTTP 요청 |
+| `config/WebConfigCorsTest.kt` | `WebConfig`의 REST `/api/**` CORS | `@SpringBootTest(RANDOM_PORT)` + 실제 preflight 요청 |
 | `TravelApplicationTests.kt` | 애플리케이션 컨텍스트 로딩 (`contextLoads`) | `@SpringBootTest` + JUnit `@Test` |
 
 ---
@@ -436,6 +437,13 @@ spring:
 |-------|------|------|
 | SockJS `/ws/info` 핸드셰이크 | 허용된 origin(`cors.allowed-origins`) | 200 |
 | SockJS `/ws/info` 핸드셰이크 | 허용되지 않은 origin | 403 |
+
+### 6-18. WebConfigCorsTest
+
+| given | when | then |
+|-------|------|------|
+| `OPTIONS /api/trips` preflight | 허용된 origin(`cors.allowed-origins`) | 200, `Access-Control-Allow-Origin`=해당 origin, `Access-Control-Allow-Credentials: true` |
+| `OPTIONS /api/trips` preflight | 허용되지 않은 origin | 403 |
 
 ---
 
