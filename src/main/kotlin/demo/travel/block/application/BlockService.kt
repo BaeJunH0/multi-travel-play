@@ -6,6 +6,7 @@ import demo.travel.block.application.dto.BlockCommand
 import demo.travel.block.application.dto.BlockResult
 import demo.travel.block.event.BlockDeletedEvent
 import demo.travel.block.event.toCostChangedEventOrNull
+import demo.travel.common.TripCategory
 import demo.travel.common.exception.VersionConflictException
 import demo.travel.trip.TripMemberRepository
 import demo.travel.trip.TripRole
@@ -36,6 +37,7 @@ class BlockService(
 
     fun addBlock(command: BlockCommand.Create): BlockResult {
         requireEditorOrAbove(command.tripId, command.userId)
+        requireBlockType(command.blockType)
         val lastPosition = blockRepository
             .findTopByTripIdAndDayNumberOrderByPositionDesc(command.tripId, command.dayNumber)
             ?.position ?: 0.0
@@ -89,6 +91,7 @@ class BlockService(
     fun deleteBlock(tripId: UUID, blockId: UUID, userId: UUID) {
         requireEditorOrAbove(tripId, userId)
         val block = findBlockOrThrow(blockId, tripId)
+        checkLock(block, userId)
         blockRepository.delete(block)
         eventPublisher.publishEvent(BlockDeletedEvent(block.id))
     }
@@ -133,6 +136,12 @@ class BlockService(
         val member = tripMemberRepository.findByTripIdAndUserId(tripId, userId)
             ?: throw ResponseStatusException(HttpStatus.FORBIDDEN)
         if (member.role == TripRole.VIEWER) throw ResponseStatusException(HttpStatus.FORBIDDEN)
+    }
+
+    private fun requireBlockType(blockType: TripCategory) {
+        if (!blockType.isBlockType) {
+            throw ResponseStatusException(HttpStatus.BAD_REQUEST, "블록에 사용할 수 없는 카테고리입니다: $blockType")
+        }
     }
 
     private fun checkLock(block: ScheduleBlock, userId: UUID) {

@@ -71,5 +71,6 @@ POST /api/trips/{tripId}/ai/apply
 ```
 - `selectedBlocks`의 내용을 서버가 그대로 저장 (재검증 없음)
 - `tempId`, `blockType`, `placeName`, `dayNumber`, `position`은 필수 — 누락 시 `400 INVALID_REQUEST`
+- `blockType`이 block용(`HOTEL | FOOD | CAFE | PLACE | TRANSPORT`)이 아닌 항목이 하나라도 있으면 아무것도 저장하지 않고 `400 INVALID_REQUEST`
 - Google Places API로 `lat/lng` 자동 보강 (실패 시 null 허용)
 - 최소 권한: EDITOR
