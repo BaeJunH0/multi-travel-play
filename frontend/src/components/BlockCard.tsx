@@ -2,6 +2,7 @@ import { Trash2, Clock, Timer, Coins } from 'lucide-react'
 import type { Block } from '../types'
 import { BLOCK_STYLE } from '../types'
 import BlockTypeBadge from './ui/BlockTypeBadge'
+import { auth } from '../store/auth'
 
 interface Props {
   block: Block
@@ -29,7 +30,8 @@ export default function BlockCard({
   onDrop,
 }: Props) {
   const s = BLOCK_STYLE[block.blockType]
-  const locked = block.lockedBy !== null
+  const lockedByMe = block.lockedBy !== null && block.lockedBy === auth.getUser()?.id
+  const locked = block.lockedBy !== null && !lockedByMe
   const editable = !locked && !isViewer
 
   const handleCardClick = () => {
@@ -70,6 +72,11 @@ export default function BlockCard({
               {locked && (
                 <span className="inline-block px-2 py-0.5 text-xs rounded-full bg-pink-100 text-pink-600 font-medium">
                   {block.lockedByNickname} 편집 중
+                </span>
+              )}
+              {lockedByMe && (
+                <span className="inline-block px-2 py-0.5 text-xs rounded-full bg-violet-100 text-violet-600 font-medium">
+                  내가 편집 중
                 </span>
               )}
             </div>
