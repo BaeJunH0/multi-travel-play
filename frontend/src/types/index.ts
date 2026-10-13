@@ -85,11 +85,11 @@ export interface WsMessage {
 }
 
 export type WsPayload =
-  | { block: Block }                                                          // ADD
+  | Block                                                                     // ADD
   | { blockId: string; block: Block }                                        // UPDATE
   | { blockId: string; dayNumber: number; position: number; version: number }// MOVE
   | { blockId: string }                                                       // DELETE
-  | { blockId: string; lockedBy: string; lockedByNickname: string }          // LOCK
+  | { blockId: string; lockedBy: string | null; lockedByNickname: string | null } // LOCK
   | { blockId: string }                                                       // UNLOCK
   | { blockId: string; currentBlock: Block }                                 // CONFLICT
   | { users: Presence[] }                                                    // PRESENCE
