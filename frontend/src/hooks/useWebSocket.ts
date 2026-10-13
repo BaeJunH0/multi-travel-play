@@ -6,13 +6,39 @@ import type { WsMessage } from '../types'
 
 interface Options {
   tripId: string
+  activeDay: number | null
   onMessage: (msg: WsMessage) => void
 }
 
-export function useWebSocket({ tripId, onMessage }: Options) {
+const AVATAR_COLORS = ['#7F77DD', '#E8735A', '#3BA889', '#E0A63B', '#4A90D9', '#D45D9A']
+
+// userId 기반으로 항상 같은 아바타 색을 고른다
+function avatarColorOf(userId: string) {
+  let hash = 0
+  for (const ch of userId) hash = (hash * 31 + ch.charCodeAt(0)) | 0
+  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length]
+}
+
+// Presence 알림 (백엔드 PresenceRequest 형식)
+function publishPresence(client: Client, tripId: string, activeDay: number | null) {
+  const user = auth.getUser()
+  if (!user || !client.connected) return
+  client.publish({
+    destination: `/app/trip.${tripId}.presence`,
+    body: JSON.stringify({
+      userId: user.id,
+      nickname: user.nickname,
+      avatarColor: avatarColorOf(user.id),
+      activeDay,
+    }),
+  })
+}
+
+export function useWebSocket({ tripId, activeDay, onMessage }: Options) {
   const clientRef = useRef<Client | null>(null)
   const onMessageRef = useRef(onMessage)
   onMessageRef.current = onMessage
+  const activeDayRef = useRef(activeDay)
 
   useEffect(() => {
     const client = new Client({
@@ -26,8 +52,7 @@ export function useWebSocket({ tripId, onMessage }: Options) {
             onMessageRef.current(msg)
           } catch { /* ignore malformed */ }
         })
-        // Presence 알림
-        client.publish({ destination: `/app/trip.${tripId}.presence` })
+        publishPresence(client, tripId, activeDayRef.current)
       },
     })
 
@@ -36,4 +61,10 @@ export function useWebSocket({ tripId, onMessage }: Options) {
 
     return () => { client.deactivate() }
   }, [tripId])
+
+  // 활성 Day가 바뀌면 Presence 재전송
+  useEffect(() => {
+    activeDayRef.current = activeDay
+    if (clientRef.current) publishPresence(clientRef.current, tripId, activeDay)
+  }, [tripId, activeDay])
 }

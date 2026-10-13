@@ -45,6 +45,13 @@ export interface Presence {
   activeDay?: number | null
 }
 
+export interface User {
+  id: string
+  email: string
+  nickname: string
+  provider: string
+}
+
 export interface TripMember {
   userId: string
   nickname: string

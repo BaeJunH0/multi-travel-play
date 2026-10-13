@@ -10,6 +10,9 @@ import InvitePage from './pages/InvitePage'
 
 type InitState = 'loading' | 'authed' | 'unauthed'
 
+// 현재 로그인 유저 정보 보관 (Presence 등에서 사용)
+const loadMe = () => authApi.me().then(({ data }) => auth.setUser(data))
+
 export default function App() {
   const [initState, setInitState] = useState<InitState>('loading')
 
@@ -18,8 +21,9 @@ export default function App() {
     authApi.refresh()
       .then(({ data }) => {
         auth.setToken(data.accessToken)
-        setInitState('authed')
+        return loadMe()
       })
+      .then(() => setInitState('authed'))
       .catch(() => setInitState('unauthed'))
   }, [])
 
@@ -35,7 +39,7 @@ export default function App() {
     <BrowserRouter>
       <Toaster position="bottom-center" toastOptions={{ duration: 3000 }} />
       <Routes>
-        <Route path="/login" element={<LoginPage onLogin={() => setInitState('authed')} />} />
+        <Route path="/login" element={<LoginPage onLogin={() => { loadMe().catch(() => {}); setInitState('authed') }} />} />
         <Route path="/invite/:shareToken" element={<InvitePage />} />
 
         {initState === 'authed' ? (

@@ -19,6 +19,8 @@ export default function TripEditorPage() {
   const { tripId } = useParams<{ tripId: string }>()!
   const [trip, setTrip] = useState<TripDetail | null>(null)
   const [presence, setPresence] = useState<Presence[]>([])
+  // 활성 Day: 사용자가 마지막으로 클릭(포인터 다운)한 Day 컬럼
+  const [activeDay, setActiveDay] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
 
   const [blockModalOpen, setBlockModalOpen] = useState(false)
@@ -50,6 +52,7 @@ export default function TripEditorPage() {
   // WebSocket
   useWebSocket({
     tripId: tripId!,
+    activeDay,
     onMessage: (msg) => {
       if (msg.action === 'PRESENCE') {
         setPresence((msg.payload as any).users)
@@ -315,26 +318,27 @@ export default function TripEditorPage() {
       <div className="flex-1 overflow-x-auto px-4 py-4">
         <div className="flex gap-4 min-w-max">
           {trip.days.map((day) => (
-            <DayColumn
-              key={day.dayNumber}
-              day={day}
-              blocks={blocks.filter((b) => b.dayNumber === day.dayNumber)}
-              isViewer={isViewer}
-              canDelete={trip.days.length > 1}
-              draggedBlockId={draggedBlockId}
-              dragTargetInfo={dragTargetInfo}
-              onAddBlock={handleAddBlock}
-              onDeleteDay={handleDeleteDay}
-              onChangeDate={handleChangeDate}
-              onSortByTime={handleSortByTime}
-              onEditBlock={handleEditBlock}
-              onDeleteBlock={deleteBlock}
-              onDragStart={handleDragStart}
-              onDragEnd={handleDragEnd}
-              onDragOverBlock={handleDragOverBlock}
-              onDropOnBlock={handleDropOnBlock}
-              onDropOnColumn={handleDropOnColumn}
-            />
+            <div key={day.dayNumber} className="contents" onPointerDown={() => setActiveDay(day.dayNumber)}>
+              <DayColumn
+                day={day}
+                blocks={blocks.filter((b) => b.dayNumber === day.dayNumber)}
+                isViewer={isViewer}
+                canDelete={trip.days.length > 1}
+                draggedBlockId={draggedBlockId}
+                dragTargetInfo={dragTargetInfo}
+                onAddBlock={handleAddBlock}
+                onDeleteDay={handleDeleteDay}
+                onChangeDate={handleChangeDate}
+                onSortByTime={handleSortByTime}
+                onEditBlock={handleEditBlock}
+                onDeleteBlock={deleteBlock}
+                onDragStart={handleDragStart}
+                onDragEnd={handleDragEnd}
+                onDragOverBlock={handleDragOverBlock}
+                onDropOnBlock={handleDropOnBlock}
+                onDropOnColumn={handleDropOnColumn}
+              />
+            </div>
           ))}
 
           {!isViewer && (
