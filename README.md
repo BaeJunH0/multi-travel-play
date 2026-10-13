@@ -41,11 +41,27 @@
   </tr>
 </table>
 
+## 프로젝트 구조
+
+```
+.
+├── src/, build.gradle.kts   # 백엔드 (Spring Boot)
+├── frontend/                # 프론트엔드 (React + Vite)
+└── docs/                    # 문서 (프론트 문서는 docs/frontend/)
+```
+
 ## 실행 방법
 
 ```bash
 # MySQL, Redis 실행 후
 ./gradlew bootRun
+```
+
+```bash
+# 프론트엔드 (http://localhost:5173, /api·/ws는 localhost:8080으로 프록시)
+cd frontend
+npm install
+npm run dev
 ```
 
 DB 테이블은 `src/main/resources/schema.sql` 참고. `schema.sql`은 `CREATE TABLE IF NOT EXISTS`라 기존 DB에는 반영되지 않으므로, 이미 테이블이 있는 환경이라면 `src/main/resources/migration/`의 스크립트를 날짜순으로 직접 실행해야 한다.
