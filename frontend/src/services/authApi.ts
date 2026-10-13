@@ -15,6 +15,11 @@ export const authApi = {
     window.location.href = '/api/auth/oauth2/kakao'
   },
 
+  // 구글 OAuth: 서버 URL로 직접 이동
+  googleLogin: () => {
+    window.location.href = '/api/auth/oauth2/google'
+  },
+
   // refreshToken(HttpOnly 쿠키)으로 accessToken 재발급
   refresh: () =>
     axios.post<{ accessToken: string }>('/api/auth/refresh'),
