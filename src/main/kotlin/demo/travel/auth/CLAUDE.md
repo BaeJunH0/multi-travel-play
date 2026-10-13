@@ -80,15 +80,13 @@ GET /oauth2/{provider}/callback?code=...
 
 ```
 POST /api/auth/password-reset/request  { email }
-  → 사용자 미존재 시 아무 응답 없이 return (이메일 열거 공격 방지)
-  → 소셜 계정도 이 단계에서는 거르지 않고 코드를 발송한다 (confirm 단계에서 거부)
+  → 사용자 미존재 또는 소셜(비 LOCAL) 계정이면 아무 응답 없이 return (이메일 열거 공격 방지)
   → 6자리 난수 생성 → Redis "password-reset:{email}" 에 TTL 15분 저장
   → JavaMailSender 로 이메일 발송 (mailSender null 이면 스킵)
 
 POST /api/auth/password-reset/confirm  { email, token, newPassword }
-  → 사용자 미존재 시 400 USER_NOT_FOUND
-  → 소셜 계정이면 400 SOCIAL_ACCOUNT (BusinessException 기본 status)
   → Redis 코드 대조 → 불일치·만료 시 400 INVALID_RESET_TOKEN
+  → 사용자 미존재·소셜 계정이어도 같은 400 INVALID_RESET_TOKEN (실패 사유를 구분하지 않음)
   → BCrypt 해시 후 user.changePassword() 호출
   → Redis 키 삭제
   → 새 accessToken 반환 (자동 로그인)

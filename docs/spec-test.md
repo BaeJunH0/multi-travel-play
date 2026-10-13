@@ -174,6 +174,7 @@ spring:
 | 파일 | 대상 서비스 | 시나리오 수 |
 |------|------------|------------|
 | `auth/AuthServiceTest.kt` | `AuthService` | 13 |
+| `auth/PasswordResetServiceTest.kt` | `PasswordResetService` | 7 |
 | `trip/TripServiceTest.kt` | `TripService` | 14 |
 | `block/BlockServiceTest.kt` | `BlockService` | 21 |
 | `budget/BudgetServiceTest.kt` | `BudgetService` | 10 |
@@ -228,6 +229,18 @@ spring:
 | logout | 파싱 불가 토큰 | Redis 삭제 없이 종료 |
 | kakaoLogin | 신규 사용자 | 유저 저장 후 TokenPair |
 | kakaoLogin | 기존 사용자 | 저장 없이 TokenPair |
+
+### 6-1-1. PasswordResetService
+
+| given | when | then |
+|-------|------|------|
+| requestReset | LOCAL 계정 | 코드를 Redis에 15분 저장, 메일 발송 |
+| requestReset | 미가입 이메일 | 저장·발송 없이 종료 |
+| requestReset | 소셜 계정 | 저장·발송 없이 종료 |
+| confirmReset | 코드 일치 + LOCAL 계정 | 비밀번호 변경, 코드 삭제, accessToken 반환 |
+| confirmReset | 코드 불일치 | 400 `INVALID_RESET_TOKEN` |
+| confirmReset | 미가입 이메일 | 400 `INVALID_RESET_TOKEN` |
+| confirmReset | 소셜 계정 | 400 `INVALID_RESET_TOKEN`, 비밀번호 유지 |
 
 ### 6-2. TripService
 
