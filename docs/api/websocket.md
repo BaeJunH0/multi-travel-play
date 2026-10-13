@@ -42,7 +42,7 @@ Presence 발행:   /app/trip.{tripId}.presence
 ```
 
 - 블록 이벤트(`ADD`~`UNLOCK`)는 REST 요청이 성공한 뒤에만 발행된다. `CONFLICT`는 수정·이동 요청이 version 충돌로 실패했을 때 발행된다. `reorder`는 이벤트를 발행하지 않는다.
-- `PRESENCE`는 presence 발행 시마다 해당 trip의 전체 접속자 목록을 브로드캐스트한다. 접속 종료(leave) 처리는 아직 연결되어 있지 않아, 한 번 등록된 접속자는 서버 메모리에서 제거되지 않는다.
+- `PRESENCE`는 presence 발행 시, 그리고 접속자의 WebSocket 연결이 끊길 때(탭 닫기·네트워크 끊김 포함) 해당 trip의 전체 접속자 목록을 브로드캐스트한다. 같은 유저가 여러 탭으로 접속했다면 마지막 연결이 끊길 때 목록에서 빠진다.
 
 ### 충돌 처리
 - 블록마다 `version` 관리

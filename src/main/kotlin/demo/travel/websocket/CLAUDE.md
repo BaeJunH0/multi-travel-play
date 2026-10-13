@@ -53,8 +53,9 @@
 store: Map<tripId, Map<userId, PresenceUser>>
 ```
 
-- **join**: 클라이언트가 `/app/trip.{tripId}.presence` 로 메시지를 보내면 `PresenceController`가 `presenceStore.join()` 을 호출해 유저 정보를 upsert한다.
-- **leave**: `presenceStore.leave(tripId, userId)` 메서드는 있지만 **현재 호출하는 곳이 없다** (WebSocket disconnect 훅 미구현). 한 번 join한 유저는 서버 재시작 전까지 목록에 남는다.
+- **join**: 클라이언트가 `/app/trip.{tripId}.presence` 로 메시지를 보내면 `PresenceController`가 `presenceStore.join()` 을 호출해 유저 정보를 upsert한다. 이때 STOMP 세션 ID(`simpSessionId`)와 `(tripId, userId)`를 함께 기록한다.
+- **leave**: `PresenceDisconnectListener`가 `SessionDisconnectEvent`를 구독해 `presenceStore.leaveSession(sessionId)`를 호출한다. 그 유저의 마지막 세션이었을 때만 presence에서 제거하고(여러 탭 접속 고려), 남은 접속자 목록을 `PRESENCE`로 다시 브로드캐스트한다.
+- 한계: 같은 세션으로 다른 trip에 presence를 다시 보내면 이전 trip의 항목은 연결이 끊길 때까지 남는다.
 - join 이후 즉시 해당 trip 전체 접속자 목록을 `PRESENCE` 이벤트로 브로드캐스트한다.
 
 **Presence 요청 형식** (클라이언트 → 서버):
@@ -73,8 +74,8 @@ store: Map<tripId, Map<userId, PresenceUser>>
 
 ## 이벤트 발행 주체
 
-`BlockController`(잠금 포함), `PresenceController` → `TripEventPublisher.publish(tripId, event)`
+`BlockController`(잠금 포함), `PresenceController`, `PresenceDisconnectListener` → `TripEventPublisher.publish(tripId, event)`
 
 `TripEventPublisher` 는 `SimpMessagingTemplate.convertAndSend("/topic/trip.{tripId}", event)` 를 래핑한 단순 컴포넌트다. 직접 `SimpMessagingTemplate` 를 쓰지 말고 반드시 `TripEventPublisher` 를 통해 발행한다.
 
-`TripEvent` 의 팩토리 메서드(`add`, `update`, `move`, `delete`, `lock`, `unlock`, `conflict`)를 사용해 이벤트를 생성한다. payload 타입은 `TripEvent.kt` 내 top-level data class(`UpdatePayload`, `MovePayload`, `LockPayload`, `ConflictPayload`)와 `mapOf("blockId" to ...)`(DELETE/UNLOCK)로 구성된다. `TripEvent.payload` 자체는 `Any` 타입이다.
+`TripEvent` 의 팩토리 메서드(`add`, `update`, `move`, `delete`, `lock`, `unlock`, `conflict`, `presence`)를 사용해 이벤트를 생성한다. payload 타입은 `TripEvent.kt` 내 top-level data class(`UpdatePayload`, `MovePayload`, `LockPayload`, `ConflictPayload`)와 `mapOf("blockId" to ...)`(DELETE/UNLOCK)로 구성된다. `TripEvent.payload` 자체는 `Any` 타입이다.

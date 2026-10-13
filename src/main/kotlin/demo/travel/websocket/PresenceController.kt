@@ -1,8 +1,10 @@
 package demo.travel.websocket
 
 import org.springframework.messaging.handler.annotation.DestinationVariable
+import org.springframework.messaging.handler.annotation.Header
 import org.springframework.messaging.handler.annotation.MessageMapping
 import org.springframework.messaging.handler.annotation.Payload
+import org.springframework.messaging.simp.SimpMessageHeaderAccessor
 import org.springframework.stereotype.Controller
 import java.util.*
 
@@ -15,11 +17,15 @@ class PresenceController(
     fun presence(
         @DestinationVariable tripId: UUID,
         @Payload(required = false) request: PresenceRequest?,
+        @Header(SimpMessageHeaderAccessor.SESSION_ID_HEADER) sessionId: String,
     ) {
         if (request == null) return
-        presenceStore.join(tripId, PresenceUser(request.userId, request.nickname, request.avatarColor, request.activeDay))
-        val users = presenceStore.getUsers(tripId)
-        eventPublisher.publish(tripId, TripEvent(TripEvent.Action.PRESENCE, tripId, mapOf("users" to users)))
+        presenceStore.join(
+            tripId,
+            PresenceUser(request.userId, request.nickname, request.avatarColor, request.activeDay),
+            sessionId,
+        )
+        eventPublisher.publish(tripId, TripEvent.presence(tripId, presenceStore.getUsers(tripId)))
     }
 }
 
