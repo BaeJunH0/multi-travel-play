@@ -26,10 +26,17 @@ const RoleIcon = ({ role }: { role: TripRole }) => {
 export default function MemberModal({ open, tripId, myRole, onClose }: Props) {
   const [members, setMembers] = useState<TripMember[]>([])
   const [loading, setLoading] = useState(false)
+  const [prevFetchKey, setPrevFetchKey] = useState<string | null>(null)
+
+  // 모달이 열리거나 tripId가 바뀌면 로딩 상태로 전환
+  const fetchKey = open ? tripId : null
+  if (fetchKey !== prevFetchKey) {
+    setPrevFetchKey(fetchKey)
+    if (fetchKey) setLoading(true)
+  }
 
   useEffect(() => {
     if (!open) return
-    setLoading(true)
     memberApi.getMembers(tripId)
       .then(({ data }) => setMembers(data))
       .catch(() => toast.error('멤버 목록을 불러오지 못했습니다.'))

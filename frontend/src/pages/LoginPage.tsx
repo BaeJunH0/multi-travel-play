@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Eye, EyeOff } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { isAxiosError } from 'axios'
 import { authApi } from '../services/authApi'
 import { auth } from '../store/auth'
 
@@ -47,8 +48,8 @@ export default function LoginPage({ onLogin }: Props) {
       auth.setToken(data.accessToken)
       onLogin()
       navigate('/')
-    } catch (err: any) {
-      toast.error(err.response?.status === 401 ? '이메일 또는 비밀번호가 올바르지 않습니다.' : '로그인에 실패했습니다.')
+    } catch (err) {
+      toast.error(isAxiosError(err) && err.response?.status === 401 ? '이메일 또는 비밀번호가 올바르지 않습니다.' : '로그인에 실패했습니다.')
     } finally {
       setLoading(false)
     }
@@ -63,8 +64,8 @@ export default function LoginPage({ onLogin }: Props) {
       auth.setToken(data.accessToken)
       onLogin()
       navigate('/')
-    } catch (err: any) {
-      toast.error(err.response?.status === 409 ? '이미 사용 중인 이메일입니다.' : '회원가입에 실패했습니다.')
+    } catch (err) {
+      toast.error(isAxiosError(err) && err.response?.status === 409 ? '이미 사용 중인 이메일입니다.' : '회원가입에 실패했습니다.')
     } finally {
       setSignupLoading(false)
     }
@@ -93,8 +94,8 @@ export default function LoginPage({ onLogin }: Props) {
       auth.setToken(data.accessToken)
       onLogin()
       navigate('/')
-    } catch (err: any) {
-      toast.error(err.response?.status === 400 ? '인증 코드가 올바르지 않거나 만료됐습니다.' : '비밀번호 변경에 실패했습니다.')
+    } catch (err) {
+      toast.error(isAxiosError(err) && err.response?.status === 400 ? '인증 코드가 올바르지 않거나 만료됐습니다.' : '비밀번호 변경에 실패했습니다.')
     } finally {
       setResetConfirmLoading(false)
     }
@@ -112,7 +113,7 @@ export default function LoginPage({ onLogin }: Props) {
         <div className="bg-white rounded-3xl shadow-lg px-8 py-8">
           {tab === 'social' && (
             <div className="space-y-3">
-              <p className="text-center text-sm text-gray-400 mb-5">카카오 계정으로 간편하게 시작하세요</p>
+              <p className="text-center text-sm text-gray-400 mb-5">소셜 계정으로 간편하게 시작하세요</p>
               <button
                 onClick={authApi.kakaoLogin}
                 className="w-full flex items-center gap-3 px-5 py-3.5 rounded-2xl bg-yellow-400 hover:bg-yellow-500 transition-colors"
@@ -121,6 +122,14 @@ export default function LoginPage({ onLogin }: Props) {
                   <path d="M12 3C6.48 3 2 6.58 2 11c0 2.76 1.7 5.2 4.3 6.7l-1.1 4.1 4.8-3.1c.65.09 1.32.14 2 .14 5.52 0 10-3.58 10-8S17.52 3 12 3z"/>
                 </svg>
                 <span className="flex-1 text-center text-sm font-bold text-yellow-900">카카오로 계속하기</span>
+              </button>
+
+              <button
+                onClick={authApi.googleLogin}
+                className="w-full flex items-center gap-3 px-5 py-3.5 rounded-2xl border border-gray-200 bg-white hover:bg-gray-50 transition-colors"
+              >
+                <span className="w-5 h-5 flex-shrink-0 flex items-center justify-center text-base font-bold text-blue-500">G</span>
+                <span className="flex-1 text-center text-sm font-bold text-gray-700">구글로 계속하기</span>
               </button>
 
               <div className="flex items-center gap-3 py-2">
@@ -179,7 +188,7 @@ export default function LoginPage({ onLogin }: Props) {
                 <span className="text-gray-200">|</span>
                 <button type="button" onClick={() => setTab('signup')} className="text-xs text-gray-400 hover:text-gray-600">회원가입</button>
                 <span className="text-gray-200">|</span>
-                <button type="button" onClick={() => setTab('social')} className="text-xs text-gray-400 hover:text-gray-600">카카오로 로그인</button>
+                <button type="button" onClick={() => setTab('social')} className="text-xs text-gray-400 hover:text-gray-600">소셜 로그인</button>
               </div>
             </form>
           )}

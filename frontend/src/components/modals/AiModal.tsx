@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { X, Sparkles, ChevronLeft, Check } from 'lucide-react'
 import toast from 'react-hot-toast'
 import type { BlockType, TripDay, AiGeneratedBlock } from '../../types'
@@ -27,17 +27,19 @@ export default function AiModal({ open, tripId, days, onClose, onApply }: Props)
   const [appliedCount, setAppliedCount] = useState(0)
   const [loading, setLoading] = useState(false)
 
-  const stableOnClose = useCallback(onClose, [onClose])
+  const [prevOpen, setPrevOpen] = useState(open)
+
   useEffect(() => {
-    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') stableOnClose() }
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
     if (open) window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [open, stableOnClose])
+  }, [open, onClose])
 
   // 모달 닫힐 때 상태 초기화
-  useEffect(() => {
+  if (open !== prevOpen) {
+    setPrevOpen(open)
     if (!open) { setStep(1); setGenerated([]) }
-  }, [open])
+  }
 
   if (!open) return null
 

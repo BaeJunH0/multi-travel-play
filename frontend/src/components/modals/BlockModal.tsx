@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { X } from 'lucide-react'
 import type { Block, BlockType } from '../../types'
 import { BLOCK_STYLE } from '../../types'
@@ -20,15 +20,17 @@ export default function BlockModal({ open, initialType, initialDayNumber = 1, ed
   const [cost, setCost] = useState('')
   const [memo, setMemo] = useState('')
 
-  const stableOnClose = useCallback(onClose, [onClose])
+  const [prevDeps, setPrevDeps] = useState<{ editBlock?: Block | null; initialType?: BlockType; open: boolean } | null>(null)
 
   useEffect(() => {
-    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') stableOnClose() }
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
     if (open) window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [open, stableOnClose])
+  }, [open, onClose])
 
-  useEffect(() => {
+  // editBlock·initialType·open이 바뀌면 폼 상태 초기화
+  if (!prevDeps || prevDeps.editBlock !== editBlock || prevDeps.initialType !== initialType || prevDeps.open !== open) {
+    setPrevDeps({ editBlock, initialType, open })
     if (editBlock) {
       setBlockType(editBlock.blockType)
       setPlaceName(editBlock.placeName)
@@ -44,7 +46,7 @@ export default function BlockModal({ open, initialType, initialDayNumber = 1, ed
       setCost('')
       setMemo('')
     }
-  }, [editBlock, initialType, open])
+  }
 
   if (!open) return null
 
