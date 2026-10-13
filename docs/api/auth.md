@@ -14,7 +14,7 @@ GET /api/auth/oauth2/kakao
 GET /api/auth/oauth2/kakao/callback?code={code}
 ```
 - 카카오로부터 전달받은 code로 토큰 교환 및 유저 upsert
-- 성공 시 refreshToken 쿠키(HttpOnly) 설정 후 `/` 로 redirect
+- 성공 시 refreshToken 쿠키(HttpOnly, `Path=/api/auth`, 7일) + accessToken 쿠키(HttpOnly, `Path=/`, 1시간) 설정 후 `/` 로 redirect
 - 인증 불필요
 
 ### 구글 소셜 로그인 시작
@@ -29,7 +29,7 @@ GET /api/auth/oauth2/google
 GET /api/auth/oauth2/google/callback?code={code}
 ```
 - 구글로부터 전달받은 code로 토큰 교환 및 유저 upsert
-- 성공 시 refreshToken 쿠키(HttpOnly) 설정 후 `/` 로 redirect
+- 성공 시 refreshToken 쿠키(HttpOnly, `Path=/api/auth`, 7일) + accessToken 쿠키(HttpOnly, `Path=/`, 1시간) 설정 후 `/` 로 redirect
 - 인증 불필요
 
 ### 이메일 회원가입
@@ -38,9 +38,9 @@ POST /api/auth/signup
 ```
 **요청**
 ```json
-{ "email": "string", "password": "string", "nickname": "string" }
+{ "email": "string", "password": "string (8자 이상)", "nickname": "string" }
 ```
-**응답** `201 Created`
+**응답** `201 Created` + `Set-Cookie: refreshToken=...; HttpOnly; Path=/api/auth`
 ```json
 { "accessToken": "string" }
 ```
@@ -101,7 +101,8 @@ POST /api/auth/password-reset/request
 ```
 **응답** `200 OK`
 - 이메일로 6자리 인증 코드 발송, Redis에 15분간 보관
-- 소셜 로그인 계정(Kakao/Google) 미지원
+- 가입되지 않은 이메일이어도 동일하게 `200 OK` (이메일 열거 방지)
+- 소셜 로그인 계정(Kakao/Google)도 코드는 발송되지만, 확인 단계에서 `400 SOCIAL_ACCOUNT`로 거부됨
 - 인증 불필요
 
 ### 비밀번호 재설정 확인
@@ -116,5 +117,8 @@ POST /api/auth/password-reset/confirm
 ```json
 { "accessToken": "string" }
 ```
-**에러**: 코드 불일치/만료 시 `400 INVALID_RESET_TOKEN`
+**에러**
+- 가입되지 않은 이메일: `400 USER_NOT_FOUND`
+- 소셜 로그인 계정: `400 SOCIAL_ACCOUNT`
+- 코드 불일치/만료: `400 INVALID_RESET_TOKEN`
 - 인증 불필요

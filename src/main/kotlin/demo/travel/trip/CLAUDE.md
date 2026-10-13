@@ -71,11 +71,11 @@ tripMemberRepository.save(TripMember(trip = trip, user = user, role = TripRole.O
 
 ### days 자동 계산 (응답 전용)
 
-`TripDetailResponse.of`에서 `startDate ~ endDate` 범위를 `ChronoUnit.DAYS`로 계산해 `DayResponse` 리스트를 생성한다. DB에 저장되지 않으며 조회·생성·수정 응답마다 서버에서 재계산된다.
+`TripResult.Detail.of`에서 `startDate ~ endDate` 범위를 `ChronoUnit.DAYS`로 계산해 `TripResult.Day` 리스트를 생성한다 (presentation에서는 `TripResponse.Day`로 변환). DB에 저장되지 않으며 조회·생성·수정 응답마다 서버에서 재계산된다.
 
 ```kotlin
 (0..startDate.until(endDate, ChronoUnit.DAYS).toInt())
-    .map { i -> DayResponse(i + 1, startDate.plusDays(i.toLong())) }
+    .map { i -> Day(i + 1, startDate.plusDays(i.toLong())) }
 ```
 
 ### 권한 체크 방식
@@ -86,7 +86,7 @@ tripMemberRepository.save(TripMember(trip = trip, user = user, role = TripRole.O
 
 ### 수정 (PATCH) — 부분 업데이트
 
-`UpdateTripRequest`의 모든 필드는 nullable이며, null이 아닌 필드만 엔티티에 반영한다. `@Transactional` 컨텍스트 내 dirty checking으로 저장된다.
+`TripRequest.Update`(→ `TripCommand.Update`)의 모든 필드는 nullable이며, null이 아닌 필드만 엔티티에 반영한다. `@Transactional` 컨텍스트 내 dirty checking으로 저장된다.
 
 ---
 

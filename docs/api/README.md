@@ -37,5 +37,6 @@
 | 409 | `VERSION_CONFLICT` | 블록 version 불일치 |
 | 423 | `ALREADY_LOCKED` | 다른 사용자가 블록 잠금 중 |
 | 400 | `INVALID_RESET_TOKEN` | 비밀번호 재설정 코드 불일치 또는 만료 |
-| 403 | `SOCIAL_ACCOUNT` | 소셜 로그인 계정은 비밀번호 변경 불가 |
+| 400 | `USER_NOT_FOUND` | 비밀번호 재설정 확인 시 가입되지 않은 이메일 |
+| 400 | `SOCIAL_ACCOUNT` | 소셜 로그인 계정은 비밀번호 변경 불가 |
 | 500 | `INTERNAL_ERROR` | 서버 오류 |

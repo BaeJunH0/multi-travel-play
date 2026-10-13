@@ -33,6 +33,8 @@ POST /api/trips/{tripId}/budget
   "memo": "string | null"
 }
 ```
+- `amount`는 0 이상
+
 **응답** `201 Created` — BudgetItem 객체 (`blockId`는 항상 `null`)
 - 최소 권한: EDITOR
 
@@ -40,7 +42,9 @@ POST /api/trips/{tripId}/budget
 ```
 PATCH /api/trips/{tripId}/budget/{itemId}
 ```
-**요청**: `category`, `amount`, `memo` 부분 수정 가능
+**요청**: `category`, `amount`, `memo` 부분 수정 가능 (전달된 필드만 반영)
+
+**응답** — BudgetItem 객체
 - 최소 권한: EDITOR
 
 ### 예산 항목 삭제

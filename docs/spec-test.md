@@ -1,6 +1,6 @@
 # spec-test.md — 테스트 전략 및 명세
 
-> 작성 기준일: 2026-08-04
+> 작성 기준일: 2026-10-12
 
 ---
 
@@ -174,19 +174,19 @@ spring:
 | 파일 | 대상 서비스 | 시나리오 수 |
 |------|------------|------------|
 | `auth/AuthServiceTest.kt` | `AuthService` | 13 |
-| `trip/TripServiceTest.kt` | `TripService` | 10 |
-| `block/BlockServiceTest.kt` | `BlockService` | 15 |
-| `budget/BudgetServiceTest.kt` | `BudgetService` | 8 |
+| `trip/TripServiceTest.kt` | `TripService` | 14 |
+| `block/BlockServiceTest.kt` | `BlockService` | 21 |
+| `budget/BudgetServiceTest.kt` | `BudgetService` | 10 |
 | `invite/InviteServiceTest.kt` | `InviteService` | 9 |
-| `member/MemberServiceTest.kt` | `MemberService` | 9 |
+| `member/MemberServiceTest.kt` | `MemberService` | 13 |
 
 ### Repository 통합 테스트
 
 | 파일 | 대상 | 시나리오 수 |
 |------|------|------------|
 | `user/UserRepositoryTest.kt` | `UserRepository` | 5 |
-| `trip/TripRepositoryTest.kt` | `TripRepository`, `TripMemberRepository` | 8 |
-| `block/BlockRepositoryTest.kt` | `BlockRepository` | 6 |
+| `trip/TripRepositoryTest.kt` | `TripRepository`, `TripMemberRepository` | 9 |
+| `block/BlockRepositoryTest.kt` | `BlockRepository` | 7 |
 | `budget/BudgetRepositoryTest.kt` | `BudgetRepository` | 4 |
 
 ### Domain/Entity 단위 테스트
@@ -205,6 +205,7 @@ spring:
 | 파일 | 대상 | 방식 |
 |------|------|------|
 | `config/WebSocketConfigTest.kt` | `WebSocketConfig`의 `/ws` origin 허용 목록 | `@SpringBootTest(RANDOM_PORT)` + 실제 HTTP 요청 |
+| `TravelApplicationTests.kt` | 애플리케이션 컨텍스트 로딩 (`contextLoads`) | `@SpringBootTest` + JUnit `@Test` |
 
 ---
 
@@ -238,11 +239,14 @@ spring:
 | getDetail | 멤버인 경우 | 상세 반환 (days 포함) |
 | getDetail | 멤버 아님 | 403 FORBIDDEN |
 | getDetail | 여행 미존재 | 404 NOT_FOUND |
-| update | EDITOR 이상 | 필드 수정 반영 |
+| update | EDITOR | 필드 수정 반영 |
+| update | OWNER | 필드 수정 반영 |
 | update | VIEWER | 403 FORBIDDEN |
 | update | 멤버 아님 | 403 FORBIDDEN |
 | delete | OWNER | 삭제 실행 |
-| delete | EDITOR / VIEWER / 비멤버 | 403 FORBIDDEN |
+| delete | EDITOR | 403 FORBIDDEN |
+| delete | VIEWER | 403 FORBIDDEN |
+| delete | 비멤버 | 403 FORBIDDEN |
 
 ### 6-3. BlockService
 
@@ -253,7 +257,8 @@ spring:
 | addBlock | EDITOR, 기존 블록 있음 | `lastPosition + 1.0`으로 저장 |
 | addBlock | EDITOR, 첫 번째 블록 | `position = 1.0`으로 저장 |
 | addBlock | VIEWER | 403 FORBIDDEN |
-| updateBlock | 잠금 없음 + version 일치 | 필드 수정 반영 |
+| updateBlock | 잠금 없음 + version 일치 | 필드 수정 반영, cost 미포함이라 이벤트 미발행 |
+| updateBlock | cost 변경 | `BlockCostChangedEvent` 발행 |
 | updateBlock | version 불일치 | `VersionConflictException` (현재 블록 포함) |
 | updateBlock | 타인이 잠금 | 423 LOCKED |
 | updateBlock | 본인이 잠금 | 정상 수정 |
@@ -350,6 +355,7 @@ spring:
 | findTopByTripIdAndDayNumberOrderByPositionDesc | 해당 day 블록 여러 개 | position 최대값 블록 |
 | findTopByTripIdAndDayNumberOrderByPositionDesc | 블록 없음 | null 반환 |
 | findTopByTripIdAndDayNumberOrderByPositionDesc | 다른 day 블록 혼재 | 지정 day만 대상 |
+| lockedBy 변경 | lockedBy만 변경 후 저장 | version 증가하지 않음 |
 
 ### 6-10. BudgetRepository
 

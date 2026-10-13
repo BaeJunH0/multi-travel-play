@@ -13,7 +13,7 @@ GET /api/trips/{tripId}/blocks
     "id": "uuid",
     "dayNumber": 1,
     "position": 1.0,
-    "blockType": "HOTEL | FOOD | CAFE | PLACE | TRANSPORT",
+    "blockType": "HOTEL | FOOD | CAFE | PLACE | TRANSPORT | FLIGHT | ETC",
     "placeName": "string",
     "lat": "number | null",
     "lng": "number | null",
@@ -45,6 +45,7 @@ POST /api/trips/{tripId}/blocks
 }
 ```
 **응답** `201 Created` — Block 객체 (`position` 은 해당 day 마지막 + 1.0 자동 설정)
+- `blockType`은 block/budget 공용 enum(`TripCategory`) 7종 모두 허용 (`FLIGHT`, `ETC` 포함)
 - 최소 권한: EDITOR
 
 ### 블록 수정
@@ -62,10 +63,14 @@ PATCH /api/trips/{tripId}/blocks/{blockId}
   "version": 3
 }
 ```
-**에러**: version 불일치 시 `409`
+**응답** — 수정된 Block 객체
+
+**에러**
+- version 불일치 시 `409`
 ```json
 { "code": "VERSION_CONFLICT", "message": "string", "currentBlock": { } }
 ```
+- 다른 사용자가 잠금 중이면 `423 ALREADY_LOCKED`
 - 최소 권한: EDITOR
 
 ### 블록 이동 (DnD)
@@ -80,7 +85,10 @@ PATCH /api/trips/{tripId}/blocks/{blockId}/move
   "version": 3
 }
 ```
+**응답** — 이동된 Block 객체
+
 **에러**: version 불일치 시 `409 VERSION_CONFLICT`
+- 잠금 여부는 확인하지 않음 (다른 사용자가 잠근 블록도 이동 가능)
 - 최소 권한: EDITOR
 
 ### 블록 삭제
@@ -88,6 +96,7 @@ PATCH /api/trips/{tripId}/blocks/{blockId}/move
 DELETE /api/trips/{tripId}/blocks/{blockId}
 ```
 **응답** `204 No Content`
+- 잠금 여부는 확인하지 않음 (다른 사용자가 잠근 블록도 삭제 가능)
 - 최소 권한: EDITOR
 
 ### Position 재정규화
@@ -97,6 +106,7 @@ POST /api/trips/{tripId}/blocks/reorder
 **응답** `204 No Content`
 - `position` 간격이 `1e-9` 미만으로 좁아졌을 때 호출
 - 각 day 내 블록을 `1.0, 2.0, 3.0 ...` 으로 재정규화
+- WebSocket 이벤트를 발행하지 않음
 - 최소 권한: EDITOR
 
 ---
@@ -116,4 +126,5 @@ POST /api/trips/{tripId}/blocks/{blockId}/lock
 DELETE /api/trips/{tripId}/blocks/{blockId}/lock
 ```
 **응답** `204 No Content`
-- 본인이 걸어둔 잠금만 해제됨
+- 본인이 걸어둔 잠금만 해제됨 (다른 사용자의 잠금이면 아무 변화 없이 `204`)
+- 멤버 여부·역할 확인 없음 (블록이 해당 trip에 없으면 `404`)

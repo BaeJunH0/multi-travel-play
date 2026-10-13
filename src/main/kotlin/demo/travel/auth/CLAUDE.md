@@ -8,7 +8,7 @@
 
 | Method | Path | 설명 | 인증 필요 |
 |--------|------|------|-----------|
-| POST | `/api/auth/signup` | 이메일 회원가입. `201` + accessToken 반환 | X |
+| POST | `/api/auth/signup` | 이메일 회원가입. `201` + accessToken 반환 (refreshToken 쿠키도 설정) | X |
 | POST | `/api/auth/login` | 이메일 로그인. accessToken 반환 | X |
 | POST | `/api/auth/refresh` | refreshToken 쿠키로 새 accessToken 발급 | X |
 | POST | `/api/auth/logout` | Redis에서 refreshToken 삭제 + 쿠키 만료 | X |
@@ -81,11 +81,13 @@ GET /oauth2/{provider}/callback?code=...
 ```
 POST /api/auth/password-reset/request  { email }
   → 사용자 미존재 시 아무 응답 없이 return (이메일 열거 공격 방지)
+  → 소셜 계정도 이 단계에서는 거르지 않고 코드를 발송한다 (confirm 단계에서 거부)
   → 6자리 난수 생성 → Redis "password-reset:{email}" 에 TTL 15분 저장
   → JavaMailSender 로 이메일 발송 (mailSender null 이면 스킵)
 
 POST /api/auth/password-reset/confirm  { email, token, newPassword }
-  → 소셜 계정이면 403 SOCIAL_ACCOUNT
+  → 사용자 미존재 시 400 USER_NOT_FOUND
+  → 소셜 계정이면 400 SOCIAL_ACCOUNT (BusinessException 기본 status)
   → Redis 코드 대조 → 불일치·만료 시 400 INVALID_RESET_TOKEN
   → BCrypt 해시 후 user.changePassword() 호출
   → Redis 키 삭제
