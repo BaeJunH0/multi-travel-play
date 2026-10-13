@@ -28,7 +28,7 @@ Presence 발행:   /app/trip.{tripId}.presence
 | `DELETE` | 블록 삭제 | `{ blockId }` |
 | `LOCK` | 잠금 획득 | `{ blockId, lockedBy, lockedByNickname }` |
 | `UNLOCK` | 잠금 해제 | `{ blockId }` |
-| `CONFLICT` | version 충돌 (**현재 미발행**) | `{ blockId, currentBlock }` |
+| `CONFLICT` | 블록 수정·이동 시 version 충돌 | `{ blockId, currentBlock }` |
 | `PRESENCE` | 접속자 변경 | `{ users: [{ userId, nickname, avatarColor, activeDay }] }` |
 
 ### Presence 발행 형식
@@ -41,11 +41,10 @@ Presence 발행:   /app/trip.{tripId}.presence
 }
 ```
 
-- 블록 이벤트(`ADD`~`UNLOCK`)는 REST 요청이 성공한 뒤에만 발행된다. `reorder`는 이벤트를 발행하지 않는다.
+- 블록 이벤트(`ADD`~`UNLOCK`)는 REST 요청이 성공한 뒤에만 발행된다. `CONFLICT`는 수정·이동 요청이 version 충돌로 실패했을 때 발행된다. `reorder`는 이벤트를 발행하지 않는다.
 - `PRESENCE`는 presence 발행 시마다 해당 trip의 전체 접속자 목록을 브로드캐스트한다. 접속 종료(leave) 처리는 아직 연결되어 있지 않아, 한 번 등록된 접속자는 서버 메모리에서 제거되지 않는다.
 
 ### 충돌 처리
 - 블록마다 `version` 관리
-- `version` 불일치 시 REST `409 VERSION_CONFLICT` 응답 (body에 `currentBlock` 포함)
-- `CONFLICT` 이벤트는 action·payload 타입만 정의되어 있고 **현재 어디서도 브로드캐스트하지 않는다** — 충돌한 요청자만 REST `409`로 알 수 있다
-- 클라이언트는 Optimistic Update 후 `409` 수신 시 `currentBlock`(서버 상태)으로 롤백
+- `version` 불일치 시 REST `409 VERSION_CONFLICT` 응답(body에 `currentBlock` 포함) + `CONFLICT` 이벤트 브로드캐스트
+- 클라이언트는 Optimistic Update 후 `409` 또는 `CONFLICT` 수신 시 `currentBlock`(서버 상태)으로 롤백

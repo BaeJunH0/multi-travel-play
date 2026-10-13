@@ -5,6 +5,7 @@ import demo.travel.block.application.BlockService
 import demo.travel.block.application.dto.BlockCommand
 import demo.travel.block.presentation.dto.BlockRequest
 import demo.travel.block.presentation.dto.BlockResponse
+import demo.travel.common.exception.VersionConflictException
 import demo.travel.user.User
 import demo.travel.websocket.TripEvent
 import demo.travel.websocket.TripEventPublisher
@@ -52,19 +53,21 @@ class BlockController(
         @PathVariable blockId: UUID,
         @Valid @RequestBody request: BlockRequest.Update,
     ): BlockResponse = BlockResponse.of(
-        blockService.updateBlock(
-            BlockCommand.Update(
-                tripId = tripId,
-                blockId = blockId,
-                placeName = request.placeName,
-                startTime = request.startTime,
-                durationMin = request.durationMin,
-                cost = request.cost,
-                memo = request.memo,
-                version = request.version,
-                userId = user.id,
+        broadcastingConflict(tripId) {
+            blockService.updateBlock(
+                BlockCommand.Update(
+                    tripId = tripId,
+                    blockId = blockId,
+                    placeName = request.placeName,
+                    startTime = request.startTime,
+                    durationMin = request.durationMin,
+                    cost = request.cost,
+                    memo = request.memo,
+                    version = request.version,
+                    userId = user.id,
+                )
             )
-        )
+        }
     ).also { eventPublisher.publish(tripId, TripEvent.update(tripId, it)) }
 
     @PatchMapping("/{blockId}/move")
@@ -74,16 +77,18 @@ class BlockController(
         @PathVariable blockId: UUID,
         @Valid @RequestBody request: BlockRequest.Move,
     ): BlockResponse = BlockResponse.of(
-        blockService.moveBlock(
-            BlockCommand.Move(
-                tripId = tripId,
-                blockId = blockId,
-                dayNumber = request.dayNumber,
-                position = request.position,
-                version = request.version,
-                userId = user.id,
+        broadcastingConflict(tripId) {
+            blockService.moveBlock(
+                BlockCommand.Move(
+                    tripId = tripId,
+                    blockId = blockId,
+                    dayNumber = request.dayNumber,
+                    position = request.position,
+                    version = request.version,
+                    userId = user.id,
+                )
             )
-        )
+        }
     ).also { eventPublisher.publish(tripId, TripEvent.move(tripId, it)) }
 
     @DeleteMapping("/{blockId}")
@@ -121,4 +126,13 @@ class BlockController(
     @ResponseStatus(HttpStatus.NO_CONTENT)
     fun reorder(@CurrentUser user: User, @PathVariable tripId: UUID) =
         blockService.reorderBlocks(tripId, user.id)
+
+    /** version 충돌 시 다른 접속자에게도 CONFLICT를 알리고, 예외는 그대로 던져 요청자에게 409를 돌려준다. */
+    private fun <T> broadcastingConflict(tripId: UUID, block: () -> T): T =
+        try {
+            block()
+        } catch (e: VersionConflictException) {
+            eventPublisher.publish(tripId, TripEvent.conflict(tripId, BlockResponse.of(e.currentBlock)))
+            throw e
+        }
 }

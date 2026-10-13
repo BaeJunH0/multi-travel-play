@@ -38,10 +38,10 @@
 | `DELETE` | 블록 삭제 | `{ blockId }` |
 | `LOCK` | 잠금 획득 | `{ blockId, lockedBy, lockedByNickname }` |
 | `UNLOCK` | 잠금 해제 | `{ blockId }` |
-| `CONFLICT` | version 충돌 (**현재 미발행**) | `{ blockId, currentBlock: BlockResponse }` |
+| `CONFLICT` | 블록 수정·이동 시 version 충돌 | `{ blockId, currentBlock: BlockResponse }` |
 | `PRESENCE` | 접속자 변경 | `{ users: [{ userId, nickname, avatarColor, activeDay }] }` |
 
-**충돌 처리 흐름**: version 불일치 시 REST `409 VERSION_CONFLICT` 응답 body의 `currentBlock`(서버 최신 상태)으로 클라이언트가 롤백한다. `CONFLICT` action과 `TripEvent.conflict()` 팩토리는 정의되어 있지만 **현재 호출하는 곳이 없어 브로드캐스트되지 않는다**.
+**충돌 처리 흐름**: 클라이언트가 Optimistic Update를 적용한 뒤 `CONFLICT` 이벤트(또는 요청자라면 REST `409`)를 받으면 `currentBlock`(서버 최신 상태)으로 롤백한다. `BlockController`가 `VersionConflictException`을 잡아 `TripEvent.conflict()`를 브로드캐스트한 뒤 예외를 다시 던지므로, REST `409` 응답과 `CONFLICT` 이벤트가 함께 나간다.
 
 ---
 

@@ -179,6 +179,7 @@ spring:
 | `block/BlockServiceTest.kt` | `BlockService` | 24 |
 | `budget/BudgetServiceTest.kt` | `BudgetService` | 10 |
 | `ai/AiServiceTest.kt` | `AiService.apply` | 3 |
+| `block/BlockControllerTest.kt` | `BlockController` 충돌 브로드캐스트 | 3 |
 | `invite/InviteServiceTest.kt` | `InviteService` | 9 |
 | `member/MemberServiceTest.kt` | `MemberService` | 13 |
 
@@ -299,6 +300,14 @@ spring:
 | apply | block용 카테고리만 선택 | 모두 저장, tempId echo, lat/lng 보강 |
 | apply | block에 쓰지 않는 카테고리(ETC) 포함 | 400 BAD_REQUEST, 아무것도 저장 안 함 |
 | apply | VIEWER | 403 FORBIDDEN |
+
+### 6-3-2. BlockController
+
+| given | when | then |
+|-------|------|------|
+| updateBlock | version 충돌 | `CONFLICT` 브로드캐스트, `VersionConflictException` 재전파, `UPDATE` 미발행 |
+| updateBlock | 정상 수정 | `UPDATE`만 브로드캐스트 |
+| moveBlock | version 충돌 | `CONFLICT` 브로드캐스트, `VersionConflictException` 재전파, `MOVE` 미발행 |
 
 ### 6-4. BudgetService
 

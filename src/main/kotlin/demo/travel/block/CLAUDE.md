@@ -75,7 +75,7 @@ checkVersion(block, command.version)  // version 불일치 → VersionConflictEx
 
 ## WebSocket 이벤트 발행 시점
 
-`BlockController`가 서비스 호출 후 `.also { eventPublisher.publish(...) }` 패턴으로 발행한다. 서비스 로직 성공 후에만 발행된다.
+`BlockController`가 서비스 호출 후 `.also { eventPublisher.publish(...) }` 패턴으로 발행한다. `CONFLICT`를 제외하면 서비스 로직 성공 후에만 발행된다.
 
 | 컨트롤러 메서드 | TripEvent | 발행 payload |
 |--------------|-----------|-------------|
@@ -85,8 +85,9 @@ checkVersion(block, command.version)  // version 불일치 → VersionConflictEx
 | `deleteBlock` | `TripEvent.delete` | `{ blockId }` |
 | `lockBlock` | `TripEvent.lock` | `{ blockId, lockedBy, lockedByNickname }` |
 | `unlockBlock` | `TripEvent.unlock` | `{ blockId }` |
+| `updateBlock`, `moveBlock` (version 충돌 시) | `TripEvent.conflict` | `{ blockId, currentBlock }` |
 
-`reorder`는 WebSocket 이벤트를 발행하지 않는다.
+`updateBlock`/`moveBlock`은 `broadcastingConflict`로 서비스 호출을 감싸, `VersionConflictException`이 나면 `CONFLICT`를 발행한 뒤 예외를 다시 던진다(응답은 `GlobalExceptionHandler`가 409로 변환). `reorder`는 WebSocket 이벤트를 발행하지 않는다.
 
 구독 destination: `/topic/trip.{tripId}`
 
