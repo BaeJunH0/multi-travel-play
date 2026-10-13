@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Eye, EyeOff } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { isAxiosError } from 'axios'
 import { authApi } from '../services/authApi'
 import { auth } from '../store/auth'
 
@@ -47,8 +48,8 @@ export default function LoginPage({ onLogin }: Props) {
       auth.setToken(data.accessToken)
       onLogin()
       navigate('/')
-    } catch (err: any) {
-      toast.error(err.response?.status === 401 ? '이메일 또는 비밀번호가 올바르지 않습니다.' : '로그인에 실패했습니다.')
+    } catch (err) {
+      toast.error(isAxiosError(err) && err.response?.status === 401 ? '이메일 또는 비밀번호가 올바르지 않습니다.' : '로그인에 실패했습니다.')
     } finally {
       setLoading(false)
     }
@@ -63,8 +64,8 @@ export default function LoginPage({ onLogin }: Props) {
       auth.setToken(data.accessToken)
       onLogin()
       navigate('/')
-    } catch (err: any) {
-      toast.error(err.response?.status === 409 ? '이미 사용 중인 이메일입니다.' : '회원가입에 실패했습니다.')
+    } catch (err) {
+      toast.error(isAxiosError(err) && err.response?.status === 409 ? '이미 사용 중인 이메일입니다.' : '회원가입에 실패했습니다.')
     } finally {
       setSignupLoading(false)
     }
@@ -93,8 +94,8 @@ export default function LoginPage({ onLogin }: Props) {
       auth.setToken(data.accessToken)
       onLogin()
       navigate('/')
-    } catch (err: any) {
-      toast.error(err.response?.status === 400 ? '인증 코드가 올바르지 않거나 만료됐습니다.' : '비밀번호 변경에 실패했습니다.')
+    } catch (err) {
+      toast.error(isAxiosError(err) && err.response?.status === 400 ? '인증 코드가 올바르지 않거나 만료됐습니다.' : '비밀번호 변경에 실패했습니다.')
     } finally {
       setResetConfirmLoading(false)
     }

@@ -43,14 +43,21 @@ const emptyEdit = (): EditState => ({ category: 'ETC', amount: '', memo: '' })
 export default function BudgetModal({ open, tripId, onClose }: Props) {
   const [items, setItems] = useState<BudgetItem[]>([])
   const [loading, setLoading] = useState(false)
+  const [prevFetchKey, setPrevFetchKey] = useState<string | null>(null)
   const [adding, setAdding] = useState(false)
   const [newItem, setNewItem] = useState<EditState>(emptyEdit())
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editState, setEditState] = useState<EditState>(emptyEdit())
 
+  // 모달이 열리거나 tripId가 바뀌면 로딩 상태로 전환
+  const fetchKey = open ? tripId : null
+  if (fetchKey !== prevFetchKey) {
+    setPrevFetchKey(fetchKey)
+    if (fetchKey) setLoading(true)
+  }
+
   useEffect(() => {
     if (!open) return
-    setLoading(true)
     budgetApi.getItems(tripId)
       .then(({ data }) => setItems(data))
       .catch(() => toast.error('예산을 불러오지 못했습니다.'))
