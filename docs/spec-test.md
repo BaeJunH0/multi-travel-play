@@ -88,7 +88,7 @@ class FooRepositoryTest(
 
 - `@DataJpaTest`는 JPA 관련 빈만 로드하고 웹·서비스 계층은 제외한다.
 - `SpringExtension`이 Spring 컨텍스트와 Kotest BehaviorSpec을 연결한다.
-- H2 설정은 `src/test/resources/application.yml`에 정의되어 있다.
+- H2 설정은 `backend/src/test/resources/application.yml`에 정의되어 있다.
 - 테스트 간 격리는 고유한 이메일·suffix를 사용해 충돌을 방지한다. (`Transactional` 자동 롤백 없이 독립적 데이터 생성 방식 채택)
 
 ### 3-4. Domain 단위 테스트 — 순수 BehaviorSpec
@@ -145,7 +145,7 @@ verify(exactly = 0) { repository.delete(any()) }
 
 ---
 
-## 4. H2 설정 (`src/test/resources/application.yml`)
+## 4. H2 설정 (`backend/src/test/resources/application.yml`)
 
 ```yaml
 spring:
