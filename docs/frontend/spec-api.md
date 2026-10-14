@@ -320,7 +320,7 @@ POST /api/trips/{tripId}/blocks/reorder
 **응답** `204 No Content`
 - `position` 간격이 `1e-9` 미만으로 좁아졌을 때 호출
 - 각 day 내 블록을 `1.0, 2.0, 3.0 ...` 으로 재정규화
-- WebSocket 이벤트를 발행하지 않음
+- SSE 이벤트를 발행하지 않음
 - 최소 권한: EDITOR
 
 ---
@@ -333,6 +333,7 @@ POST /api/trips/{tripId}/blocks/{blockId}/lock
 ```
 **응답** `200 OK` — Block 객체
 **에러**: 다른 사용자가 잠금 중이면 `423 ALREADY_LOCKED`
+- 잠금 만료 시각을 지금부터 3분 뒤로 둔다. 만료된 잠금은 없는 것으로 보고 새로 잡을 수 있다
 - 최소 권한: EDITOR
 
 ### 잠금 해제 (모달 닫힐 때)
@@ -342,6 +343,12 @@ DELETE /api/trips/{tripId}/blocks/{blockId}/lock
 **응답** `204 No Content`
 - 본인이 걸어둔 잠금만 해제됨 (다른 사용자의 잠금이면 아무 변화 없이 `204`)
 - 멤버 여부·역할 확인 없음 (블록이 해당 trip에 없으면 `404`)
+
+### 잠금 자동 해제
+잠금은 편집 모달을 닫을 때 해제하는 것이 기본이고, 아래 두 경우에는 서버가 해제한 뒤 `UNLOCK` 이벤트를 브로드캐스트한다.
+- **연결 종료**: 잠금자의 해당 trip 마지막 SSE 연결이 끊기면, 그 유저가 그 trip에서 잡고 있던 잠금을 즉시 모두 해제한다
+- **만료 (안전망 TTL 3분)**: 잠금마다 만료 시각이 있다. 잠금자의 SSE 연결이 살아 있으면 heartbeat(30초)마다 만료를 지금부터 3분 뒤로 연장한다. 연결 없이 만료가 지난 잠금은 heartbeat 때 해제한다
+- 잠금 확인(수정 · 이동 · 삭제 · 잠금 획득)에서는 만료된 잠금을 없는 것으로 취급한다
 
 ---
 
@@ -568,16 +575,25 @@ POST /api/trips/{tripId}/ai/apply
 
 ---
 
-## 8. WebSocket (STOMP)
+## 8. 실시간 이벤트 (SSE)
 
-### 연결
+### 이벤트 구독
 ```
-SockJS endpoint: /ws
-구독 destination: /topic/trip.{tripId}
-Presence 발행:   /app/trip.{tripId}.presence
+GET /api/trips/{tripId}/events
+Accept: text/event-stream
+Authorization: Bearer {accessToken}
 ```
+**응답** `200 OK` `Content-Type: text/event-stream` — 연결을 유지한 채 이벤트를 계속 보낸다
+- 헤더 인증이 필요하므로 브라우저 `EventSource` 대신 fetch 기반 SSE 클라이언트를 쓴다 (토큰을 URL 쿼리에 넣지 않는다)
+- 인증 실패 `401`, 여행 멤버가 아니면 `403` (VIEWER도 구독 가능). 이 엔드포인트의 에러 응답은 상태 코드만 의미가 있다 (`Accept: text/event-stream`이라 JSON 본문을 보장하지 않음)
+- 연결 시간 제한 없음. 서버가 스트림을 닫으면(재시작 등) 클라이언트가 다시 연결한다
+- 단일 서버 메모리에 연결을 보관한다 (수평 확장 미지원)
 
-### 수신 이벤트 형식
+### 이벤트 형식
+각 이벤트는 `data:` 한 줄에 JSON으로 온다 (이벤트 이름 없음).
+```
+data: {"action":"MOVE","tripId":"uuid","payload":{ }}
+```
 ```json
 {
   "action": "ADD | UPDATE | MOVE | DELETE | LOCK | UNLOCK | CONFLICT | PRESENCE",
@@ -595,22 +611,39 @@ Presence 발행:   /app/trip.{tripId}.presence
 | `MOVE` | 블록 이동 | `{ blockId, dayNumber, position, version }` |
 | `DELETE` | 블록 삭제 | `{ blockId }` |
 | `LOCK` | 잠금 획득 | `{ blockId, lockedBy, lockedByNickname }` |
-| `UNLOCK` | 잠금 해제 | `{ blockId }` |
+| `UNLOCK` | 잠금 해제 (직접 해제 · 연결 종료 · 만료) | `{ blockId }` |
 | `CONFLICT` | 블록 수정·이동 시 version 충돌 | `{ blockId, currentBlock }` |
 | `PRESENCE` | 접속자 변경 | `{ users: [{ userId, nickname, avatarColor, activeDay }] }` |
 
-### Presence 발행 형식
-```json
-{
-  "userId": "uuid",
-  "nickname": "string",
-  "avatarColor": "string",
-  "activeDay": 2
-}
-```
+- 블록 이벤트(`ADD`~`DELETE`, `LOCK`)는 REST 요청이 성공한 뒤에만 발행된다. `CONFLICT`는 수정·이동 요청이 version 충돌로 실패했을 때 발행된다. `reorder`는 이벤트를 발행하지 않는다.
+- `UNLOCK`은 잠금 해제 API 외에, 잠금자의 마지막 연결이 끊기거나 잠금이 만료되어 서버가 해제할 때도 발행된다 (블록 문서의 "잠금 자동 해제" 참고).
 
-- 블록 이벤트(`ADD`~`UNLOCK`)는 REST 요청이 성공한 뒤에만 발행된다. `CONFLICT`는 수정·이동 요청이 version 충돌로 실패했을 때 발행된다. `reorder`는 이벤트를 발행하지 않는다.
-- `PRESENCE`는 presence 발행 시, 그리고 접속자의 WebSocket 연결이 끊길 때(탭 닫기·네트워크 끊김 포함) 해당 trip의 전체 접속자 목록을 브로드캐스트한다. 같은 유저가 여러 탭으로 접속했다면 마지막 연결이 끊길 때 목록에서 빠진다.
+### Heartbeat
+- 서버는 30초마다 모든 연결에 SSE 주석(`:heartbeat`)을 보낸다. 클라이언트에는 이벤트로 전달되지 않는다
+- 전송에 실패한 연결은 끊긴 것으로 보고 정리한다 (아래 연결 종료 처리)
+
+### Presence
+- 연결하면 접속자로 자동 등록되고 해당 trip의 전체 접속자 목록이 `PRESENCE`로 브로드캐스트된다
+  - `nickname`은 유저 정보, `avatarColor`는 userId로 서버가 계산한다 (같은 유저는 항상 같은 색). 처음 `activeDay`는 `null`
+  - 같은 유저가 이미 다른 탭으로 접속 중이면 기존 정보를 유지한다
+- 연결이 끊기면(탭 닫기·네트워크 끊김 포함) 그 유저의 해당 trip **마지막 연결**일 때만 목록에서 빠지고 `PRESENCE`가 브로드캐스트된다
+
+### 활성 Day 변경
+```
+POST /api/trips/{tripId}/presence
+```
+**요청**
+```json
+{ "activeDay": 2 }
+```
+**응답** `204 No Content`
+- 접속 중인 유저의 `activeDay`를 바꾸고 `PRESENCE`를 브로드캐스트한다
+- 이벤트 구독(연결) 중이 아니면 아무것도 바뀌지 않는다 (`204`). 그래서 클라이언트는 연결이 열린 직후 현재 활성 Day를 한 번 보낸다
+
+### 연결 종료 처리
+유저의 해당 trip 마지막 연결이 끊기면:
+1. 접속자 목록에서 제거 → `PRESENCE`
+2. 그 유저가 그 trip에서 잡고 있던 블록 잠금을 모두 해제 → 블록마다 `UNLOCK`
 
 ### 충돌 처리
 - 블록마다 `version` 관리

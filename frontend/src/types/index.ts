@@ -82,16 +82,16 @@ export interface AiGenerateResponse {
   blocks: AiGeneratedBlock[]
 }
 
-// WebSocket
-export type WsAction = 'ADD' | 'UPDATE' | 'MOVE' | 'DELETE' | 'LOCK' | 'UNLOCK' | 'CONFLICT' | 'PRESENCE'
+// SSE 실시간 이벤트
+export type TripEventAction = 'ADD' | 'UPDATE' | 'MOVE' | 'DELETE' | 'LOCK' | 'UNLOCK' | 'CONFLICT' | 'PRESENCE'
 
-export interface WsMessage {
-  action: WsAction
+export interface TripEvent {
+  action: TripEventAction
   tripId: string
-  payload: WsPayload
+  payload: TripEventPayload
 }
 
-export type WsPayload =
+export type TripEventPayload =
   | Block                                                                     // ADD
   | { blockId: string; block: Block }                                        // UPDATE
   | { blockId: string; dayNumber: number; position: number; version: number }// MOVE

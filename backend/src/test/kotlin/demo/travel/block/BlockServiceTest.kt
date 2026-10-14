@@ -21,7 +21,11 @@ import org.springframework.context.ApplicationEventPublisher
 import org.springframework.data.repository.findByIdOrNull
 import org.springframework.http.HttpStatus
 import org.springframework.web.server.ResponseStatusException
+import java.time.Clock
+import java.time.Instant
 import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.ZoneOffset
 import java.util.*
 
 class BlockServiceTest : BehaviorSpec({
@@ -30,7 +34,9 @@ class BlockServiceTest : BehaviorSpec({
     val tripMemberRepository = mockk<TripMemberRepository>()
     val userRepository = mockk<UserRepository>()
     val eventPublisher = mockk<ApplicationEventPublisher>(relaxed = true)
-    val service = BlockService(blockRepository, tripMemberRepository, userRepository, eventPublisher)
+    val clock = Clock.fixed(Instant.parse("2026-10-14T03:00:00Z"), ZoneOffset.UTC)
+    val now = LocalDateTime.now(clock)
+    val service = BlockService(blockRepository, tripMemberRepository, userRepository, eventPublisher, clock)
 
     val userId = UUID.randomUUID()
     val otherId = UUID.randomUUID()
@@ -46,10 +52,16 @@ class BlockServiceTest : BehaviorSpec({
 
     fun memberWith(role: TripRole, u: User = user) = TripMember(trip = trip, user = u, role = role)
 
-    fun makeBlock(version: Long = 0L, lockedBy: User? = null) = ScheduleBlock(
-        id = blockId, trip = trip, dayNumber = 1, position = 1.0,
+    // 잠금이 있으면 기본으로 아직 만료되지 않은 잠금
+    fun makeBlock(
+        version: Long = 0L,
+        lockedBy: User? = null,
+        lockExpiresAt: LocalDateTime? = lockedBy?.let { now.plusMinutes(1) },
+        id: UUID = blockId,
+    ) = ScheduleBlock(
+        id = id, trip = trip, dayNumber = 1, position = 1.0,
         blockType = TripCategory.PLACE, placeName = "경복궁", createdBy = user,
-        version = version, lockedBy = lockedBy,
+        version = version, lockedBy = lockedBy, lockExpiresAt = lockExpiresAt,
     )
 
     beforeEach { clearAllMocks() }
@@ -194,6 +206,18 @@ class BlockServiceTest : BehaviorSpec({
             }
         }
 
+        `when`("다른 사용자의 잠금이 만료됐을 때") {
+            then("잠금이 없는 것으로 보고 정상 수정된다") {
+                val block = makeBlock(version = 0L, lockedBy = otherUser, lockExpiresAt = now.minusSeconds(1))
+                every { tripMemberRepository.findByTripIdAndUserId(tripId, userId) } returns memberWith(TripRole.EDITOR)
+                every { blockRepository.findByIdOrNull(blockId) } returns block
+                every { blockRepository.flush() } just Runs
+
+                val result = service.updateBlock(command)
+                result.placeName shouldBe "수정된 장소"
+            }
+        }
+
         `when`("본인이 잠근 블록일 때") {
             then("정상 수정된다") {
                 val block = makeBlock(version = 0L, lockedBy = user)
@@ -326,7 +350,7 @@ class BlockServiceTest : BehaviorSpec({
 
     given("lockBlock") {
         `when`("잠금이 없는 블록일 때") {
-            then("자신으로 lockedBy를 설정한다") {
+            then("자신으로 lockedBy를 설정하고 만료 시각을 TTL(3분) 뒤로 둔다") {
                 val block = makeBlock(lockedBy = null)
                 every { tripMemberRepository.findByTripIdAndUserId(tripId, userId) } returns memberWith(TripRole.EDITOR)
                 every { blockRepository.findByIdOrNull(blockId) } returns block
@@ -334,6 +358,20 @@ class BlockServiceTest : BehaviorSpec({
 
                 val result = service.lockBlock(tripId, blockId, userId)
                 result.lockedBy shouldBe userId
+                block.lockExpiresAt shouldBe now.plusMinutes(3)
+            }
+        }
+
+        `when`("다른 사용자의 잠금이 만료됐을 때") {
+            then("잠금을 가져온다") {
+                val block = makeBlock(lockedBy = otherUser, lockExpiresAt = now)
+                every { tripMemberRepository.findByTripIdAndUserId(tripId, userId) } returns memberWith(TripRole.EDITOR)
+                every { blockRepository.findByIdOrNull(blockId) } returns block
+                every { userRepository.getReferenceById(userId) } returns user
+
+                val result = service.lockBlock(tripId, blockId, userId)
+                result.lockedBy shouldBe userId
+                block.lockExpiresAt shouldBe now.plusMinutes(3)
             }
         }
 
@@ -363,13 +401,14 @@ class BlockServiceTest : BehaviorSpec({
 
     given("unlockBlock") {
         `when`("본인이 잠근 블록일 때") {
-            then("lockedBy를 null로 해제한다") {
+            then("lockedBy와 만료 시각을 null로 해제한다") {
                 val block = makeBlock(lockedBy = user)
                 every { blockRepository.findByIdOrNull(blockId) } returns block
 
                 service.unlockBlock(tripId, blockId, userId)
 
                 block.lockedBy shouldBe null
+                block.lockExpiresAt shouldBe null
             }
         }
 
@@ -381,6 +420,56 @@ class BlockServiceTest : BehaviorSpec({
                 service.unlockBlock(tripId, blockId, userId)
 
                 block.lockedBy shouldBe otherUser
+            }
+        }
+    }
+
+    given("releaseLocks") {
+        `when`("유저가 여행에서 잠금을 잡고 있을 때") {
+            then("모두 해제하고 해제한 blockId 목록을 반환한다") {
+                val block1 = makeBlock(lockedBy = user, id = UUID.randomUUID())
+                val block2 = makeBlock(lockedBy = user, id = UUID.randomUUID())
+                every { blockRepository.findAllByTripIdAndLockedById(tripId, userId) } returns listOf(block1, block2)
+
+                service.releaseLocks(tripId, userId) shouldBe listOf(block1.id, block2.id)
+                block1.lockedBy shouldBe null
+                block2.lockExpiresAt shouldBe null
+            }
+        }
+    }
+
+    given("refreshLocks") {
+        `when`("잠금자의 SSE 연결이 살아 있을 때") {
+            then("만료가 지났더라도 만료 시각을 지금부터 TTL 뒤로 연장한다") {
+                val block = makeBlock(lockedBy = user, lockExpiresAt = now.minusSeconds(10))
+                every { blockRepository.findAllByLockedByIsNotNull() } returns listOf(block)
+
+                service.refreshLocks(setOf(tripId to userId)) shouldBe emptyList()
+                block.lockedBy shouldBe user
+                block.lockExpiresAt shouldBe now.plusMinutes(3)
+            }
+        }
+
+        `when`("잠금자의 연결이 없고 만료가 지났을 때") {
+            then("잠금을 해제하고 (tripId, blockId)를 반환한다") {
+                val block = makeBlock(lockedBy = user, lockExpiresAt = now.minusSeconds(1))
+                every { blockRepository.findAllByLockedByIsNotNull() } returns listOf(block)
+
+                service.refreshLocks(setOf(tripId to otherId)) shouldBe listOf(tripId to blockId)
+                block.lockedBy shouldBe null
+                block.lockExpiresAt shouldBe null
+            }
+        }
+
+        `when`("잠금자의 연결이 없지만 아직 만료 전일 때") {
+            then("잠금과 만료 시각을 그대로 둔다") {
+                val expiresAt = now.plusMinutes(2)
+                val block = makeBlock(lockedBy = user, lockExpiresAt = expiresAt)
+                every { blockRepository.findAllByLockedByIsNotNull() } returns listOf(block)
+
+                service.refreshLocks(emptySet()) shouldBe emptyList()
+                block.lockedBy shouldBe user
+                block.lockExpiresAt shouldBe expiresAt
             }
         }
     }

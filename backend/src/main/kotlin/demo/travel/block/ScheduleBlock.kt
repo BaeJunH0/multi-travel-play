@@ -51,6 +51,10 @@ class ScheduleBlock(
     @JoinColumn(name = "locked_by")
     var lockedBy: User? = null,
 
+    // 잠금 만료 시각. 잠금자의 SSE 연결이 살아 있는 동안 heartbeat마다 연장된다
+    @OptimisticLock(excluded = true)
+    var lockExpiresAt: LocalDateTime? = null,
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "created_by", nullable = false)
     val createdBy: User,

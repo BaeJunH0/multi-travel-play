@@ -2,13 +2,13 @@ import { useState, useCallback } from 'react'
 import toast from 'react-hot-toast'
 import { isAxiosError } from 'axios'
 import { blockApi } from '../services/blockApi'
-import type { Block, BlockType, WsMessage } from '../types'
+import type { Block, BlockType, TripEvent } from '../types'
 
 export function useTripBlocks(tripId: string, initial: Block[]) {
   const [blocks, setBlocks] = useState<Block[]>(initial)
 
-  // WebSocket 이벤트 처리
-  const handleWsMessage = useCallback((msg: WsMessage) => {
+  // SSE 이벤트 처리
+  const handleTripEvent = useCallback((msg: TripEvent) => {
     const p = msg.payload as any
     switch (msg.action) {
       case 'ADD':
@@ -127,7 +127,7 @@ export function useTripBlocks(tripId: string, initial: Block[]) {
   const unlockBlock = useCallback((blockId: string) =>
     blockApi.unlockBlock(tripId, blockId), [tripId])
 
-  return { blocks, setBlocks, handleWsMessage, addBlock, updateBlock, moveBlock, deleteBlock, lockBlock, unlockBlock }
+  return { blocks, setBlocks, handleTripEvent, addBlock, updateBlock, moveBlock, deleteBlock, lockBlock, unlockBlock }
 }
 
 // 423 ALREADY_LOCKED 안내 문구
