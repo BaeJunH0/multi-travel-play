@@ -15,15 +15,19 @@ accessToken을 `localStorage` / `sessionStorage`에 저장하지 않는 이유�
 
 ```typescript
 let _accessToken: string | null = null
+let _user: User | null = null
 
 export const auth = {
   getToken:   () => _accessToken,
   setToken:   (token: string) => { _accessToken = token },
-  clearToken: () => { _accessToken = null },
+  clearToken: () => { _accessToken = null; _user = null },
+  getUser:    () => _user,
+  setUser:    (user: User) => { _user = user },
 }
 ```
 
 모듈 스코프 변수로 관리하므로 어떤 컴포넌트에서든 import해서 사용 가능합니다.
+현재 유저(`_user`)는 Presence 발행과 "내 잠금" 판별(`lockedBy === auth.getUser()?.id`)에 사용합니다.
 
 ---
 
@@ -34,7 +38,7 @@ export const auth = {
 ```
 앱 마운트
   └─ authApi.refresh() 호출 (POST /api/auth/refresh)
-        ├─ 성공 → auth.setToken() → initState: 'authed'
+        ├─ 성공 → auth.setToken() → GET /api/auth/me → auth.setUser() → initState: 'authed'
         └─ 실패 → initState: 'unauthed'
 ```
 
@@ -44,15 +48,18 @@ export const auth = {
 
 ## 로그인 방식
 
-### 카카오 OAuth
+### 카카오 / 구글 OAuth
 
 ```typescript
 kakaoLogin: () => {
   window.location.href = '/api/auth/oauth2/kakao'
-}
+},
+googleLogin: () => {
+  window.location.href = '/api/auth/oauth2/google'
+},
 ```
 
-서버가 카카오 OAuth 흐름을 처리하고 완료 후 프론트엔드로 리다이렉트합니다.
+서버가 카카오/구글 OAuth 흐름을 처리하고 완료 후 프론트엔드로 리다이렉트합니다.
 리다이렉트 후 앱이 다시 마운트되면서 refresh 쿠키로 토큰을 복구합니다.
 
 ### 이메일 로그인
@@ -60,7 +67,7 @@ kakaoLogin: () => {
 ```
 POST /api/auth/login  { email, password }
   └─ 응답: { accessToken }
-       └─ auth.setToken() 호출 → onLogin() 콜백 → navigate('/')
+       └─ auth.setToken() 호출 → onLogin() 콜백(GET /api/auth/me로 유저 저장) → navigate('/')
 ```
 
 오류 처리:

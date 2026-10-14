@@ -1,6 +1,6 @@
-# 여행 플래너 백엔드
+# 여행 플래너
 
-여러 명이 함께 여행 일정을 실시간으로 편집할 수 있는 협업 여행 플래너 서비스의 백엔드입니다.
+여러 명이 함께 여행 일정을 실시간으로 편집할 수 있는 협업 여행 플래너 서비스입니다. 백엔드(`backend/`)와 프론트엔드(`frontend/`)를 한 저장소에서 관리합니다.
 
 여행 계획은 보통 여러 사람이 함께 세우지만, 정작 편집은 한 명씩 돌아가며 하거나 메신저로 의견을 취합해 반영하는 경우가 많습니다.
 이 프로젝트는 하루 단위 "블록"(숙소/식사/카페/장소/이동)으로 일정을 구성하고, 여러 사용자가 동시에 접속해 실시간으로 같은 일정을 편집·조율할 수 있게 하는 것을 목표로 합니다.
@@ -18,6 +18,10 @@
 
 ## 기술 스택
 
+![React](https://img.shields.io/badge/React-61DAFB?style=for-the-badge&logo=react&logoColor=black)
+![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
+![Vite](https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind%20CSS-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white)
 ![Kotlin](https://img.shields.io/badge/Kotlin-7F52FF?style=for-the-badge&logo=kotlin&logoColor=white)
 ![Spring Boot](https://img.shields.io/badge/Spring%20Boot-6DB33F?style=for-the-badge&logo=springboot&logoColor=white)
 ![Gradle](https://img.shields.io/badge/Gradle-02303A?style=for-the-badge&logo=gradle&logoColor=white)
@@ -69,4 +73,4 @@ DB 테이블은 `backend/src/main/resources/schema.sql` 참고. `schema.sql`은 
 
 ## 문서
 
-API/DB/AI 프롬프트/테스트 문서는 [docs/](docs/) 디렉터리를 참고하세요.
+API/DB/AI 프롬프트/테스트 문서는 [docs/](docs/) 디렉터리를, 프론트엔드 문서는 [docs/frontend/](docs/frontend/)를 참고하세요.

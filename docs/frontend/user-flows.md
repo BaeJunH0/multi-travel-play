@@ -8,7 +8,8 @@
        └─ POST /api/auth/refresh (refreshToken 쿠키 전송)
             ├─ 성공
             │   └─ accessToken 메모리 저장
-            │       └─ "/" → 여행 목록 페이지
+            │       └─ GET /api/auth/me → 현재 유저 메모리 저장 (Presence · 내 잠금 판별에 사용)
+            │           └─ "/" → 여행 목록 페이지
             └─ 실패
                 └─ "/login" → 로그인 페이지
 ```
@@ -19,12 +20,12 @@
 
 ## 2. 로그인
 
-### 카카오 소셜 로그인
+### 카카오 / 구글 소셜 로그인
 
 ```
-로그인 페이지 → "카카오로 계속하기" 클릭
-  └─ window.location.href = '/api/auth/oauth2/kakao'
-       └─ 카카오 인증 서버 → 서버 OAuth 콜백
+로그인 페이지 → "카카오로 계속하기" 또는 "구글로 계속하기" 클릭
+  └─ window.location.href = '/api/auth/oauth2/kakao' (구글: '/api/auth/oauth2/google')
+       └─ 카카오/구글 인증 서버 → 서버 OAuth 콜백
             └─ 서버가 refreshToken 쿠키 설정 후 프론트엔드로 리다이렉트
                  └─ App 마운트 → refresh 복구 → 여행 목록
 ```
@@ -36,9 +37,32 @@
   └─ 이메일 / 비밀번호 입력 → 로그인 버튼
        └─ POST /api/auth/login
             ├─ 성공
-            │   └─ accessToken 저장 → "/" → 여행 목록
+            │   └─ accessToken 저장 → GET /api/auth/me → "/" → 여행 목록
             └─ 실패 (401)
                 └─ "이메일 또는 비밀번호가 올바르지 않습니다" 토스트
+```
+
+### 회원가입
+
+```
+이메일 로그인 탭 → "회원가입" 클릭
+  └─ 이메일 / 비밀번호(8자 이상) / 비밀번호 확인 / 닉네임 입력 → 가입하기
+       └─ POST /api/auth/signup
+            ├─ 성공 → accessToken 저장 → "/" → 여행 목록
+            └─ 실패 (409) → "이미 사용 중인 이메일입니다" 토스트
+```
+
+### 비밀번호 재설정
+
+```
+이메일 로그인 탭 → "비밀번호 찾기" 클릭
+  └─ [1단계] 이메일 입력 → "인증코드 전송"
+       └─ POST /api/auth/password-reset/request
+            └─ 성공/실패와 무관하게 2단계로 이동 (가입 여부 비노출)
+  └─ [2단계] 인증코드(숫자 6자리) + 새 비밀번호 입력 → "비밀번호 변경"
+       └─ POST /api/auth/password-reset/confirm
+            ├─ 성공 → accessToken 저장 → "/" → 여행 목록
+            └─ 실패 (400) → "인증 코드가 올바르지 않거나 만료됐습니다" 토스트
 ```
 
 ---
@@ -50,7 +74,8 @@
   └─ GET /api/trips
        └─ 여행 카드 그리드 렌더링
             ├─ 카드 클릭 → "/trips/:tripId" (에디터)
-            └─ "새 여행 만들기" 클릭 → (모달 미구현, 버튼만 존재)
+            └─ "새 여행 만들기" 클릭 → 모달 (제목 · 목적지 · 시작일 · 종료일)
+                 └─ POST /api/trips → "/trips/:newTripId" (에디터)
 
 로그아웃 버튼 클릭
   └─ POST /api/auth/logout
@@ -69,7 +94,10 @@
             └─ 로딩 완료 → 보드 렌더링
 
   └─ useWebSocket 연결 (STOMP)
-       └─ PRESENCE 발행 → 접속자 목록 수신 → TopBar 업데이트
+       └─ Presence 발행 { userId, nickname, avatarColor, activeDay }
+            └─ PRESENCE 수신 → 접속자 목록 → TopBar 업데이트
+  └─ 활성 Day가 바뀌면 Presence 재발행
+  └─ 다른 접속자가 탭을 닫거나 연결이 끊기면 서버가 PRESENCE를 다시 브로드캐스트
 ```
 
 ---
@@ -107,13 +135,17 @@ Day 헤더의 "+" 클릭
        │        └─ 수정 후 "저장" 클릭
        │             └─ PATCH /api/trips/:tripId/blocks/:blockId (version 포함)
        │                  ├─ 성공 → 서버 응답으로 상태 확정 → unlock → 모달 닫기
-       │                  └─ 409 → 로컬 상태 롤백 → 토스트 → unlock → 모달 닫기
+       │                  └─ 409 → 응답의 currentBlock(서버 최신)으로 교체 → 토스트 → unlock → 모달 닫기
+       │
+       │        (모달이 열린 동안 내 블록 카드에는 "내가 편집 중" 배지 표시)
        │
        │        └─ "취소" 또는 배경/Escape 클릭
        │             └─ DELETE /blocks/:blockId/lock → 모달 닫기
        │
-       └─ 실패 (이미 잠김)
-           └─ "다른 사용자가 편집 중입니다" 토스트 → 모달 미열림
+       └─ 실패 (423 ALREADY_LOCKED)
+           └─ "OO님이 편집 중입니다." 토스트 → 모달 미열림
+
+타인이 잠근 블록은 카드 클릭 자체가 비활성이다 (핑크 테두리 + "OO 편집 중" 배지).
 ```
 
 ---
@@ -125,7 +157,8 @@ Day 헤더의 "+" 클릭
   └─ 로컬 상태에서 즉시 제거 (낙관적)
        └─ DELETE /api/trips/:tripId/blocks/:blockId
             ├─ 성공 → 완료
-            └─ 실패 → 로컬 상태 복구 + "삭제에 실패했습니다" 토스트
+            ├─ 실패 (423, 다른 사용자가 잠금 중) → 로컬 상태 복구 + "OO님이 편집 중입니다." 토스트
+            └─ 그 외 실패 → 로컬 상태 복구 + "삭제에 실패했습니다" 토스트
 ```
 
 ---
@@ -262,7 +295,7 @@ TopBar "AI 생성" 버튼 클릭
 두 사용자가 같은 블록을 동시에 수정하는 경우
   └─ A가 먼저 저장 성공 (version: 1 → 2)
   └─ B가 version: 1로 저장 시도
-       └─ 서버: 409 반환 + CONFLICT 브로드캐스트
-            └─ B: 로컬 상태 롤백 (서버의 currentBlock으로)
-                 └─ "다른 사용자가 수정했습니다" 토스트
+       └─ 서버: B에게 409 VERSION_CONFLICT(currentBlock 포함) 반환 + CONFLICT 브로드캐스트
+            ├─ B: 409 응답의 currentBlock으로 교체 → "다른 사용자가 수정했습니다" 토스트 (1회)
+            └─ 다른 접속자: CONFLICT 수신 → currentBlock으로 동기화 (토스트 없음)
 ```
