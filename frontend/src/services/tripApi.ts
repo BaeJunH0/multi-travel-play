@@ -19,4 +19,8 @@ export const tripApi = {
 
   createInvite: (tripId: string) =>
     api.post<{ shareToken: string; inviteUrl: string }>(`/trips/${tripId}/invite`),
+
+  // 활성 Day 변경 (Presence)
+  updatePresence: (tripId: string, activeDay: number | null) =>
+    api.post(`/trips/${tripId}/presence`, { activeDay }),
 }

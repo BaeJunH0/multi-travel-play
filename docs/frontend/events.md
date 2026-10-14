@@ -1,73 +1,73 @@
-# WebSocket (실시간 협업)
+# 실시간 이벤트 (SSE)
 
 ## 개요
 
-블록 에디터는 여러 사용자가 동시에 편집할 수 있도록 WebSocket을 통한 실시간 동기화를 지원합니다.
+블록 에디터는 다른 사용자의 변경을 SSE(Server-Sent Events)로 받아 화면에 반영합니다. 서버 → 클라이언트 단방향이며, 클라이언트의 변경은 모두 REST로 보냅니다.
 
-- 전송 프로토콜: **STOMP** over **SockJS**
-- 연결 엔드포인트: `/ws`
-- 구독 토픽: `/topic/trip.{tripId}`
-- Presence 발행: `/app/trip.{tripId}.presence`
+- 구독 엔드포인트: `GET /api/trips/{tripId}/events` (`text/event-stream`)
+- 클라이언트: `@microsoft/fetch-event-source` (헤더로 accessToken을 보내기 위해 브라우저 `EventSource` 대신 사용)
+- 활성 Day 변경: `POST /api/trips/{tripId}/presence`
+- 개발 서버에서는 Vite의 `/api` 프록시를 그대로 탑니다 (스트림을 버퍼링하지 않음)
 
 ---
 
-## 연결 설정 (`src/hooks/useWebSocket.ts`)
+## 연결 설정 (`src/hooks/useTripEvents.ts`)
 
 ```typescript
-const client = new Client({
-  webSocketFactory: () => new SockJS('/ws'),
-  connectHeaders: { Authorization: `Bearer ${auth.getToken() ?? ''}` },
-  reconnectDelay: 3000,
-  onConnect: () => {
-    client.subscribe(`/topic/trip.${tripId}`, (frame) => {
-      try {
-        const msg: WsMessage = JSON.parse(frame.body)
-        onMessageRef.current(msg)
-      } catch { /* ignore malformed */ }
-    })
-    // 접속 시 Presence 등록
-    publishPresence(client, tripId, activeDayRef.current)
+fetchEventSource(`/api/trips/${tripId}/events`, {
+  signal: ctrl.signal,
+  openWhenHidden: true,
+  // 재연결할 때마다 최신 accessToken을 붙인다
+  fetch: (input, init) => {
+    const headers = new Headers(init?.headers)
+    headers.set('Authorization', `Bearer ${auth.getToken() ?? ''}`)
+    return fetch(input, { ...init, headers })
+  },
+  async onopen(res) {
+    if (res.ok) { sendPresence(tripId, activeDayRef.current); return }
+    if (res.status === 401) { await authApi.me(); throw new Error('unauthorized') }
+    throw new FatalError(`SSE 연결 실패: ${res.status}`)
+  },
+  onmessage(ev) {
+    if (!ev.data) return
+    try { onMessageRef.current(JSON.parse(ev.data)) } catch { /* ignore malformed */ }
+  },
+  onclose() { throw new Error('closed') },
+  onerror(err) {
+    if (err instanceof FatalError) throw err
+    return RETRY_DELAY_MS  // 3000
   },
 })
-client.activate()
 ```
 
-`reconnectDelay: 3000` — 연결이 끊기면 3초 후 자동 재연결을 시도합니다.
+- 연결이 끊기거나 서버가 스트림을 닫으면 3초 후 자동 재연결합니다.
+- `401`이면 accessToken이 만료된 것이므로 `authApi.me()`를 호출해 axios 인터셉터의 refresh 흐름(`services/api.ts`)을 태운 뒤 재연결합니다. refresh도 실패하면 인터셉터가 로그인 페이지로 보냅니다.
+- `403` · `404` 등은 재시도하지 않습니다.
+- `openWhenHidden: true` — 기본값이면 탭이 숨겨질 때 연결을 끊는데, 마지막 연결이 끊기면 서버가 내 잠금을 해제하고 접속자에서 빼므로 탭을 옮겨도 연결을 유지합니다.
+- 서버는 30초마다 heartbeat(SSE 주석)를 보내지만 `onmessage`로는 오지 않습니다.
+- 컴포넌트 언마운트 시 `AbortController`로 연결을 끊습니다.
 
-### Presence 발행
+### Presence
 
-```typescript
-client.publish({
-  destination: `/app/trip.${tripId}.presence`,
-  body: JSON.stringify({
-    userId: user.id,          // auth.getUser() — App 진입 시 GET /api/auth/me로 저장
-    nickname: user.nickname,
-    avatarColor: avatarColorOf(user.id),
-    activeDay,
-  }),
-})
-```
-
-- 연결 직후, 그리고 활성 Day(`activeDay`)가 바뀔 때마다 발행합니다.
-- 현재 유저 정보가 아직 없거나 연결 전이면 발행하지 않습니다.
-- `avatarColor`는 userId 해시로 고정 팔레트에서 골라, 같은 유저는 항상 같은 색이 됩니다.
-- 퇴장은 따로 발행하지 않습니다. 탭을 닫거나 연결이 끊기면 서버가 접속자에서 제거하고 `PRESENCE`를 다시 브로드캐스트합니다.
-
-컴포넌트 언마운트 시 `client.deactivate()`를 호출해 연결을 정리합니다.
+- 접속자 등록은 서버가 연결 시 자동으로 합니다. `nickname`은 유저 정보, `avatarColor`는 userId 해시로 서버가 골라 같은 유저는 항상 같은 색이 됩니다.
+- 클라이언트는 활성 Day만 보냅니다: 연결이 열린 직후, 그리고 활성 Day(`activeDay`)가 바뀔 때마다 `tripApi.updatePresence(tripId, activeDay)` (`POST /api/trips/{tripId}/presence`). 연결 전에 보낸 요청은 서버가 무시합니다.
+- 퇴장은 따로 보내지 않습니다. 탭을 닫거나 연결이 끊기면 서버가 접속자에서 제거하고 `PRESENCE`를 다시 브로드캐스트합니다.
 
 ---
 
 ## 메시지 형식
 
 ```typescript
-interface WsMessage {
-  action: WsAction
+interface TripEvent {
+  action: TripEventAction
   tripId: string
-  payload: WsPayload
+  payload: TripEventPayload
 }
 
-type WsAction = 'ADD' | 'UPDATE' | 'MOVE' | 'DELETE' | 'LOCK' | 'UNLOCK' | 'CONFLICT' | 'PRESENCE'
+type TripEventAction = 'ADD' | 'UPDATE' | 'MOVE' | 'DELETE' | 'LOCK' | 'UNLOCK' | 'CONFLICT' | 'PRESENCE'
 ```
+
+SSE `data:` 한 줄이 이 형식의 JSON 하나입니다. `PRESENCE`는 `TripEditorPage`가, 나머지는 `useTripBlocks`의 `handleTripEvent`가 처리합니다.
 
 ---
 
@@ -132,6 +132,8 @@ case 'UNLOCK':
       : b
   ))
 ```
+
+잠금 해제 API 외에, 잠금자의 연결이 끊기거나 잠금이 만료되어 서버가 해제할 때도 수신됩니다.
 
 ### CONFLICT — 충돌 감지
 
@@ -241,6 +243,8 @@ const updateBlock = async (blockId: string, patch: Partial<Block>) => {
 
 내가 잠근 블록은 "내가 편집 중" 뱃지만 붙고 편집 · 삭제 · 드래그는 그대로 가능합니다.
 
+잠금은 무기한 남지 않습니다. 잠금자의 마지막 SSE 연결이 끊기면 서버가 즉시 해제하고, 연결이 살아 있지 않은 잠금은 3분(안전망 TTL) 뒤 해제됩니다. 어느 쪽이든 `UNLOCK`이 와서 다른 사용자의 화면에서 잠금 표시가 사라집니다.
+
 블록 이동 · 삭제도 서버에서 잠금을 확인합니다. 다른 사용자가 잠근 블록을 옮기거나 삭제하려 하면 `423`이 오고, 로컬 상태를 복구한 뒤 "OO님이 편집 중입니다." 토스트를 띄웁니다.
 
 ---
@@ -249,7 +253,9 @@ const updateBlock = async (blockId: string, patch: Partial<Block>) => {
 
 | 상황 | 처리 |
 |---|---|
-| WebSocket 연결 끊김 | `reconnectDelay: 3000` — 자동 재연결 |
+| SSE 연결 끊김 · 서버가 스트림 종료 | 3초 후 자동 재연결 |
+| SSE 연결 `401` | `authApi.me()`로 토큰 갱신(인터셉터) 후 재연결 |
+| SSE 연결 `403` · `404` 등 | 재연결 중단 |
 | 잘못된 JSON 수신 | try/catch로 무시 (parse 실패 시 skip) |
 | CONFLICT 수신 | `currentBlock`으로 동기화 (토스트는 409 받은 요청자만) |
 | 잠금 획득 실패 (423) | "OO님이 편집 중입니다." 토스트, 모달 미열림 |

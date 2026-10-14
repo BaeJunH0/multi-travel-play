@@ -11,7 +11,7 @@
 | 빌드 | Vite v8 |
 | HTTP | Axios v1 (공통 인스턴스 + 인터셉터) |
 | 라우팅 | react-router-dom v7 |
-| 실시간 | @stomp/stompjs v7 + SockJS |
+| 실시간 | SSE (@microsoft/fetch-event-source v2) |
 | 알림 | react-hot-toast |
 | 아이콘 | lucide-react |
 
@@ -47,13 +47,13 @@ src/
 │       └── AvatarStack.tsx       # 접속자 아바타 스택
 │
 ├── hooks/
-│   ├── useTripBlocks.ts          # 블록 상태 관리 + WebSocket 이벤트 처리
-│   └── useWebSocket.ts           # STOMP 연결 + Presence 발행
+│   ├── useTripBlocks.ts          # 블록 상태 관리 + SSE 이벤트 처리
+│   └── useTripEvents.ts          # SSE 연결 + 활성 Day(Presence) 전송
 │
 ├── services/
 │   ├── api.ts                    # Axios 인스턴스, 401 인터셉터
 │   ├── authApi.ts                # 인증 API (로그인, 회원가입, OAuth, 비밀번호 재설정)
-│   ├── tripApi.ts                # 여행 CRUD
+│   ├── tripApi.ts                # 여행 CRUD + 활성 Day(Presence) 전송
 │   ├── blockApi.ts               # 블록 CRUD + 잠금
 │   ├── inviteApi.ts              # 초대 링크
 │   ├── memberApi.ts              # 멤버 조회 · 역할 변경 · 제거
@@ -72,13 +72,14 @@ src/
 - 401 응답 시: `POST /api/auth/refresh` → 재발급 성공 시 원 요청 재시도, 실패 시 로그인 페이지 이동
 - 소셜 로그인(카카오/구글): 서버 URL로 브라우저 리다이렉트 → OAuth 완료 후 `/` 로 복귀
 
-## 실시간 협업 (WebSocket)
+## 실시간 동기화 (SSE)
 
-- `useWebSocket`: STOMP over SockJS로 `/ws` 연결, `/topic/trip.{tripId}` 구독
-- `useTripBlocks`: Optimistic Update 적용 후 WebSocket 이벤트로 최종 상태 동기화
+- `useTripEvents`: `@microsoft/fetch-event-source`로 `GET /api/trips/{tripId}/events` 구독 (`Authorization` 헤더 사용). 끊기면 3초 후 재연결, `401`이면 토큰을 갱신하고 재연결, 탭이 숨겨져도 연결 유지
+- `useTripBlocks`: Optimistic Update 적용 후 SSE 이벤트로 최종 상태 동기화
 - version 충돌(`409 VERSION_CONFLICT`) 시 응답의 `currentBlock`으로 교체하고 토스트를 한 번 띄운다. 다른 접속자는 `CONFLICT` 이벤트로 같은 블록을 동기화한다
 - 블록 잠금은 `lockedBy`를 현재 유저 id와 비교해 "내가 편집 중" / "OO 편집 중"으로 구분한다. 잠금 · 이동 · 삭제가 `423 ALREADY_LOCKED`면 "OO님이 편집 중입니다." 토스트를 띄운다
-- Presence는 연결 시와 활성 Day 변경 시 `{ userId, nickname, avatarColor, activeDay }`로 발행한다
+- 접속자 등록은 서버가 SSE 연결 시 자동으로 한다 (`nickname` · `avatarColor`도 서버가 채움). 클라이언트는 연결 직후와 활성 Day 변경 시 `POST /api/trips/{tripId}/presence`로 `activeDay`만 보낸다
+- 편집자의 마지막 연결이 끊기거나 잠금이 만료(3분)되면 서버가 잠금을 풀고 `UNLOCK`을 보낸다
 
 | 이벤트 | 처리 |
 |--------|------|
@@ -112,7 +113,7 @@ npm run dev
 # → http://localhost:5173
 ```
 
-Vite dev 서버가 `/api` → `localhost:8080`, `/ws` → `localhost:8080`(WebSocket)으로 프록시합니다.
+Vite dev 서버가 `/api` → `localhost:8080`으로 프록시합니다. SSE(`/api/trips/{tripId}/events`)도 같은 프록시를 탑니다.
 
 ## 환경 변수
 

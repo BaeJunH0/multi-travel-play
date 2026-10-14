@@ -59,6 +59,7 @@ CREATE TABLE IF NOT EXISTS schedule_blocks
     memo         TEXT,
     version      BIGINT       NOT NULL DEFAULT 0,
     locked_by    CHAR(36),
+    lock_expires_at TIMESTAMP NULL,
     created_by   CHAR(36)     NOT NULL,
     created_at   TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at   TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

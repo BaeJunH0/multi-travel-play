@@ -17,6 +17,9 @@ import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import org.springframework.web.server.ResponseStatusException
+import java.time.Clock
+import java.time.Duration
+import java.time.LocalDateTime
 import java.time.LocalTime
 import java.util.*
 
@@ -27,6 +30,7 @@ class BlockService(
     private val tripMemberRepository: TripMemberRepository,
     private val userRepository: UserRepository,
     private val eventPublisher: ApplicationEventPublisher,
+    private val clock: Clock = Clock.systemDefaultZone(),
 ) {
     @Transactional(readOnly = true)
     fun getBlocks(tripId: UUID, userId: UUID): List<BlockResult> {
@@ -100,16 +104,41 @@ class BlockService(
     fun lockBlock(tripId: UUID, blockId: UUID, userId: UUID): BlockResult {
         requireEditorOrAbove(tripId, userId)
         val block = findBlockOrThrow(blockId, tripId)
-        if (block.lockedBy != null && block.lockedBy!!.id != userId) {
-            throw ResponseStatusException(HttpStatus.valueOf(423), "다른 사용자가 편집 중입니다.")
-        }
+        checkLock(block, userId)
         block.lockedBy = userRepository.getReferenceById(userId)
+        block.lockExpiresAt = now().plus(LOCK_TTL)
         return BlockResult.of(block)
     }
 
     fun unlockBlock(tripId: UUID, blockId: UUID, userId: UUID) {
         val block = findBlockOrThrow(blockId, tripId)
-        if (block.lockedBy?.id == userId) block.lockedBy = null
+        if (block.lockedBy?.id == userId) release(block)
+    }
+
+    /** 유저가 해당 여행에서 잡고 있던 잠금을 모두 해제하고, 해제한 blockId 목록을 반환한다. (마지막 SSE 연결 종료 시) */
+    fun releaseLocks(tripId: UUID, userId: UUID): List<UUID> =
+        blockRepository.findAllByTripIdAndLockedById(tripId, userId)
+            .map { it.id }
+            .filter { blockRepository.releaseLock(it, userId) == 1 }
+
+    /**
+     * heartbeat마다 호출한다. [connected]는 SSE 연결이 살아 있는 (tripId, userId) 목록.
+     * 연결된 잠금자의 잠금은 만료를 연장하고, 그 외 만료된 잠금은 해제한다.
+     * 해제한 잠금의 (tripId, blockId) 목록을 반환한다.
+     * 읽은 뒤 바뀐 블록(다른 사용자가 새로 잠금 등)은 UPDATE 조건에서 걸러진다.
+     */
+    fun refreshLocks(connected: Set<Pair<UUID, UUID>>): List<Pair<UUID, UUID>> {
+        val now = now()
+        val released = mutableListOf<Pair<UUID, UUID>>()
+        blockRepository.findAllByLockedByIsNotNull().forEach { block ->
+            val lockedById = block.lockedBy!!.id
+            if ((block.trip.id to lockedById) in connected) {
+                blockRepository.extendLock(block.id, lockedById, now.plus(LOCK_TTL))
+            } else if (isLockExpired(block) && blockRepository.releaseExpiredLock(block.id, now) == 1) {
+                released += block.trip.id to block.id
+            }
+        }
+        return released
     }
 
     fun reorderBlocks(tripId: UUID, userId: UUID) {
@@ -145,13 +174,29 @@ class BlockService(
         }
     }
 
+    /** 다른 사용자의 잠금이 살아 있으면 423. 만료된 잠금은 없는 것으로 취급한다. */
     private fun checkLock(block: ScheduleBlock, userId: UUID) {
-        if (block.lockedBy != null && block.lockedBy!!.id != userId) {
+        val lockedBy = block.lockedBy ?: return
+        if (lockedBy.id != userId && !isLockExpired(block)) {
             throw ResponseStatusException(HttpStatus.valueOf(423), "다른 사용자가 편집 중입니다.")
         }
     }
 
+    private fun isLockExpired(block: ScheduleBlock) = block.lockExpiresAt?.isAfter(now()) != true
+
+    private fun release(block: ScheduleBlock) {
+        block.lockedBy = null
+        block.lockExpiresAt = null
+    }
+
+    private fun now() = LocalDateTime.now(clock)
+
     private fun checkVersion(block: ScheduleBlock, requestVersion: Long) {
         if (block.version != requestVersion) throw VersionConflictException(BlockResult.of(block))
+    }
+
+    companion object {
+        /** 잠금 안전망 TTL. 연결이 살아 있으면 heartbeat마다 연장된다. */
+        val LOCK_TTL: Duration = Duration.ofMinutes(3)
     }
 }

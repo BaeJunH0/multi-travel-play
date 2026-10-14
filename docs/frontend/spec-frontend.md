@@ -8,7 +8,7 @@
 | Framework | React 19 |
 | Routing | React Router v7 |
 | Styling | Tailwind CSS v4 |
-| 실시간 | @stomp/stompjs + SockJS |
+| 실시간 | SSE (@microsoft/fetch-event-source) |
 | 상태 관리 | React 내장 (useState / useCallback, Context 없이 Props drilling) |
 | HTTP | Axios |
 | DnD | HTML5 Drag and Drop API |
@@ -48,8 +48,8 @@ src/
 │       ├── BlockTypeBadge.tsx  -- 블록 유형 뱃지 (색상 분기)
 │       └── AvatarStack.tsx     -- 실시간 접속자 아바타
 ├── hooks/
-│   ├── useWebSocket.ts         -- STOMP 연결 · 구독 · Presence 발행
-│   └── useTripBlocks.ts        -- 블록 목록 상태 관리 + CRUD + WS 메시지 처리
+│   ├── useTripEvents.ts        -- SSE 연결 · 재연결 · 활성 Day(Presence) 전송
+│   └── useTripBlocks.ts        -- 블록 목록 상태 관리 + CRUD + SSE 이벤트 처리
 ├── services/                   -- 도메인별 API 모듈 (auth/trip/block/member/budget/invite/ai)
 ├── store/auth.ts               -- accessToken · 현재 유저 메모리 저장소
 └── types/index.ts              -- 공통 타입 + BLOCK_STYLE
@@ -155,7 +155,7 @@ interface Block {
 
 #### 동작
 - 편집 모달 진입 시 기존 값으로 필드 초기화
-- 저장 클릭 시 (WebSocket 이벤트는 REST 성공 후 서버가 브로드캐스트한다):
+- 저장 클릭 시 (SSE 이벤트는 REST 성공 후 서버가 브로드캐스트한다):
   - 추가: `POST /api/trips/{tripId}/blocks` 호출
   - 편집: `PATCH /api/trips/{tripId}/blocks/{blockId}` 호출
 - 편집 모달을 열기 전에 `POST /api/trips/{tripId}/blocks/{blockId}/lock` 호출
@@ -217,23 +217,23 @@ interface Block {
 
 ---
 
-## WebSocket 클라이언트 명세
+## SSE 클라이언트 명세
 
 ### 연결
 ```typescript
-const client = new Client({
-  webSocketFactory: () => new SockJS('/ws'),
-  connectHeaders: { Authorization: `Bearer ${auth.getToken() ?? ''}` },
-  reconnectDelay: 3000,
-  onConnect: () => {
-    client.subscribe(`/topic/trip.${tripId}`, onMessage)
-    publishPresence(client, tripId, activeDay)   // { userId, nickname, avatarColor, activeDay }
-  }
+fetchEventSource(`/api/trips/${tripId}/events`, {
+  signal: ctrl.signal,
+  openWhenHidden: true,                       // 탭이 숨겨져도 연결 유지
+  fetch: /* 매 연결마다 Authorization: Bearer {최신 accessToken} */,
+  onopen,    // 성공 → 현재 activeDay 전송, 401 → 토큰 갱신 후 재연결, 그 외 → 중단
+  onmessage, // data(JSON) → onMessage
+  onclose,   // 서버가 닫으면 재연결
+  onerror,   // 3초 후 재연결
 })
 ```
 
-- 연결 시, 그리고 활성 Day가 바뀔 때마다 `/app/trip.{tripId}.presence`로 Presence를 발행한다
-- `avatarColor`는 userId 해시로 고정 팔레트에서 고른다 (같은 유저는 항상 같은 색)
+- 접속자 등록은 서버가 연결 시 자동으로 한다. `nickname` · `avatarColor`(userId 해시, 같은 유저는 항상 같은 색)도 서버가 채운다
+- 연결 직후, 그리고 활성 Day가 바뀔 때마다 `POST /api/trips/{tripId}/presence` `{ activeDay }`
 
 ### 수신 이벤트 처리 (onMessage)
 
@@ -244,7 +244,7 @@ const client = new Client({
 | `MOVE` | blockId 일치 블록의 dayNumber · position · version 업데이트 |
 | `DELETE` | blockId 일치 블록 목록에서 제거 |
 | `LOCK` | blockId 일치 블록의 `lockedBy` · `lockedByNickname` 설정 |
-| `UNLOCK` | blockId 일치 블록의 `lockedBy` · `lockedByNickname` null 처리 |
+| `UNLOCK` | blockId 일치 블록의 `lockedBy` · `lockedByNickname` null 처리 (연결 종료 · 만료로 서버가 해제한 경우 포함) |
 | `CONFLICT` | 해당 블록을 `currentBlock` 으로 교체 (토스트는 409를 받은 요청자 쪽에서만 표시) |
 | `PRESENCE` | 접속자 목록 업데이트 |
 
@@ -264,6 +264,6 @@ const client = new Client({
 | 타인 잠금 블록 | 편집/삭제 버튼 미노출, 드래그 차단 |
 | 잠금 획득 · 이동 · 삭제 시 `423 ALREADY_LOCKED` | "OO님이 편집 중입니다." 토스트 (닉네임 모르면 "다른 사용자가 편집 중입니다.") |
 | version 충돌 (`409 VERSION_CONFLICT`) | 서버 최신 블록(`currentBlock`)으로 교체 + 토스트 1회 |
-| WebSocket 연결 끊김 | 자동 재연결 시도 (STOMP `reconnectDelay: 3000`) |
+| SSE 연결 끊김 | 3초 후 자동 재연결. `401`이면 토큰 갱신 후 재연결, `403` · `404`면 중단 |
 | API 에러 | 토스트 알림으로 메시지 표시, 낙관적 업데이트 롤백 |
 | VIEWER | `trip.myRole === 'VIEWER'`면 툴바 · 편집 · 공유 버튼을 처음부터 숨긴다 |

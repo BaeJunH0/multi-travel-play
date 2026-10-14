@@ -1,6 +1,6 @@
 # spec-test.md — 테스트 전략 및 명세
 
-> 작성 기준일: 2026-10-12
+> 작성 기준일: 2026-10-14
 
 ---
 
@@ -177,12 +177,13 @@ spring:
 | `auth/PasswordResetServiceTest.kt` | `PasswordResetService` | 7 |
 | `auth/PasswordResetCodeStoreTest.kt` | `PasswordResetCodeStore` (만료는 테스트용 Clock으로 검증) | 5 |
 | `trip/TripServiceTest.kt` | `TripService` | 14 |
-| `block/BlockServiceTest.kt` | `BlockService` | 26 |
+| `block/BlockServiceTest.kt` | `BlockService` (잠금 만료는 테스트용 Clock으로 검증) | 33 |
 | `budget/BudgetServiceTest.kt` | `BudgetService` | 10 |
 | `ai/AiServiceTest.kt` | `AiService.apply` | 3 |
 | `block/BlockControllerTest.kt` | `BlockController` 충돌 브로드캐스트 | 3 |
-| `websocket/PresenceStoreTest.kt` | `PresenceStore.leaveSession` | 4 |
-| `websocket/PresenceDisconnectListenerTest.kt` | `PresenceDisconnectListener` | 2 |
+| `sse/PresenceStoreTest.kt` | `PresenceStore`, `PresenceUser.avatarColorOf` | 5 |
+| `sse/TripConnectionRegistryTest.kt` | `TripConnectionRegistry`, `TripConnection.send` | 6 |
+| `sse/TripEventStreamTest.kt` | `TripEventStream` (연결 · presence · 연결 종료 시 잠금 해제 · heartbeat) | 9 |
 | `invite/InviteServiceTest.kt` | `InviteService` | 9 |
 | `member/MemberServiceTest.kt` | `MemberService` | 13 |
 
@@ -192,7 +193,7 @@ spring:
 |------|------|------------|
 | `user/UserRepositoryTest.kt` | `UserRepository` | 5 |
 | `trip/TripRepositoryTest.kt` | `TripRepository`, `TripMemberRepository` | 9 |
-| `block/BlockRepositoryTest.kt` | `BlockRepository` | 7 |
+| `block/BlockRepositoryTest.kt` | `BlockRepository` | 8 |
 | `budget/BudgetRepositoryTest.kt` | `BudgetRepository` | 4 |
 | `auth/RefreshTokenPersistenceTest.kt` | `RefreshTokenRepository`, `AuthService.login` → `refresh` | 2 |
 
@@ -211,7 +212,8 @@ spring:
 
 | 파일 | 대상 | 방식 |
 |------|------|------|
-| `config/WebSocketConfigTest.kt` | `WebSocketConfig`의 `/ws` origin 허용 목록 | `@SpringBootTest(RANDOM_PORT)` + 실제 HTTP 요청 |
+| `block/BlockLockConcurrencyTest.kt` | heartbeat 잠금 연장 · 해제와 동시 요청이 겹칠 때 | `@SpringBootTest` + `TransactionTemplate`(REQUIRES_NEW)로 두 트랜잭션을 끼워 넣음 |
+| `sse/TripEventControllerTest.kt` | `GET /api/trips/{tripId}/events` 인증 · 권한 · 첫 `PRESENCE` | `@SpringBootTest(RANDOM_PORT)` + 실제 HTTP 요청 |
 | `config/WebConfigCorsTest.kt` | `WebConfig`의 REST `/api/**` CORS | `@SpringBootTest(RANDOM_PORT)` + 실제 preflight 요청 |
 | `TravelApplicationTests.kt` | 애플리케이션 컨텍스트 로딩 (`contextLoads`) | `@SpringBootTest` + JUnit `@Test` |
 
@@ -299,6 +301,7 @@ spring:
 | updateBlock | cost 변경 | `BlockCostChangedEvent` 발행 |
 | updateBlock | version 불일치 | `VersionConflictException` (현재 블록 포함) |
 | updateBlock | 타인이 잠금 | 423 LOCKED |
+| updateBlock | 타인의 잠금이 만료됨 | 잠금 없는 것으로 보고 정상 수정 |
 | updateBlock | 본인이 잠금 | 정상 수정 |
 | updateBlock | 다른 trip의 blockId | 404 NOT_FOUND |
 | moveBlock | version 일치 | dayNumber·position 변경 |
@@ -309,11 +312,17 @@ spring:
 | deleteBlock | VIEWER | 403 FORBIDDEN |
 | deleteBlock | 타인이 잠금 | 423 LOCKED, 삭제·이벤트 없음 |
 | deleteBlock | 본인이 잠금 | 삭제 실행 |
-| lockBlock | 잠금 없음 | lockedBy = 본인 |
+| lockBlock | 잠금 없음 | lockedBy = 본인, lockExpiresAt = 지금 + 3분 |
+| lockBlock | 타인의 잠금이 만료됨 | lockedBy = 본인, lockExpiresAt = 지금 + 3분 |
 | lockBlock | 본인이 이미 잠금 | 정상 반환 |
 | lockBlock | 타인이 잠금 | 423 LOCKED |
-| unlockBlock | 본인 잠금 | lockedBy = null |
+| unlockBlock | 본인 잠금 | lockedBy · lockExpiresAt = null |
 | unlockBlock | 타인 잠금 | lockedBy 유지 (무변경) |
+| releaseLocks | 유저가 trip에서 잠금 2개 보유, 그중 1개는 그 사이 바뀜 | 블록마다 `releaseLock`, 실제 해제된(1행) blockId만 반환 |
+| refreshLocks | 잠금자의 연결이 살아 있음 (만료 지남) | `extendLock`으로 만료를 지금 + 3분으로 연장 |
+| refreshLocks | 잠금자 연결 없음 + 만료 지남 | `releaseExpiredLock`, (tripId, blockId) 반환 |
+| refreshLocks | 만료 지남, 그 사이 다른 사용자가 잠금 (0행) | 해제 목록에 넣지 않음 |
+| refreshLocks | 잠금자 연결 없음 + 만료 전 | UPDATE 호출 없음 |
 | reorderBlocks | Day별 복수 블록 | Day 내 1.0, 2.0, 3.0 ... 재정규화 |
 
 ### 6-3-1. AiService.apply
@@ -332,16 +341,40 @@ spring:
 | updateBlock | 정상 수정 | `UPDATE`만 브로드캐스트 |
 | moveBlock | version 충돌 | `CONFLICT` 브로드캐스트, `VersionConflictException` 재전파, `MOVE` 미발행 |
 
-### 6-3-3. PresenceStore / PresenceDisconnectListener
+### 6-3-3. PresenceStore
 
 | given | when | then |
 |-------|------|------|
-| leaveSession | 유저의 유일한 세션 끊김 | presence에서 제거, tripId 반환 |
-| leaveSession | 같은 유저의 다른 세션이 남음 | presence 유지, null (마지막 세션 끊길 때 제거) |
-| leaveSession | 등록되지 않은 세션 | 변화 없음, null |
-| leaveSession | 같은 trip의 다른 유저 끊김 | 그 유저만 제거 |
-| onDisconnect | 마지막 세션 끊김 | 남은 목록으로 `PRESENCE` 브로드캐스트 |
-| onDisconnect | 등록되지 않은 세션 | 발행 없음 |
+| join | 이미 접속 중인 유저가 다른 탭으로 접속 | 기존 정보(activeDay) 유지 |
+| updateActiveDay | 접속 중인 유저 | activeDay 변경, true |
+| updateActiveDay | 접속 중이 아닌 유저 | 추가하지 않음, false |
+| leave | 같은 trip의 한 유저 | 그 유저만 제거 |
+| avatarColorOf | userId | 예전 프론트 계산과 같은 색 (해시가 음수인 경우 포함) |
+
+### 6-3-4. TripConnectionRegistry
+
+| given | when | then |
+|-------|------|------|
+| remove | 유저의 유일한 연결 | true (마지막 연결) |
+| remove | 같은 유저의 다른 탭 연결이 남음 | false, 남은 연결까지 제거하면 true |
+| remove | 같은 유저의 다른 trip 연결만 남음 | true |
+| remove | 이미 제거된 연결 | false (종료 콜백 중복 처리 방지) |
+| of | 여러 trip 연결이 섞여 있음 | 해당 trip 연결만 반환 |
+| TripConnection.send | 전송 실패 | `completeWithError`, false |
+
+### 6-3-5. TripEventStream
+
+| given | when | then |
+|-------|------|------|
+| connect | 멤버 | 연결 등록, presence 추가, `PRESENCE` 브로드캐스트 |
+| connect | 비멤버 | 403, 등록 안 함 |
+| updatePresence | 접속 중인 유저 | activeDay 변경, `PRESENCE` 브로드캐스트 |
+| updatePresence | 접속 중이 아닌 유저 | 발행 없음 |
+| disconnect | 유저의 마지막 연결 | presence 제거 + `PRESENCE`, 잠금 해제 + 블록마다 `UNLOCK` |
+| disconnect | 같은 유저의 다른 탭 연결이 남음 | presence · 잠금 유지, 발행 없음 |
+| disconnect | 같은 연결 종료 콜백 2번 | 한 번만 처리 |
+| heartbeat | 전송 실패한 연결 있음 | 끊긴 연결로 처리(잠금 해제 + `UNLOCK`), 살아 있는 연결만 `refreshLocks`에 전달 |
+| heartbeat | 만료로 해제된 잠금 있음 | 해당 trip에 `UNLOCK` |
 
 ### 6-4. BudgetService
 
@@ -425,6 +458,7 @@ spring:
 | findTopByTripIdAndDayNumberOrderByPositionDesc | 블록 없음 | null 반환 |
 | findTopByTripIdAndDayNumberOrderByPositionDesc | 다른 day 블록 혼재 | 지정 day만 대상 |
 | lockedBy 변경 | lockedBy만 변경 후 저장 | version 증가하지 않음 |
+| lockedBy 변경 | lockExpiresAt만 연장 후 저장 | version 증가하지 않음 |
 
 ### 6-10. BudgetRepository
 
@@ -486,12 +520,23 @@ spring:
 | onBlockDeleted | 연동된 BudgetItem 있음 | 해당 BudgetItem 삭제 |
 | onBlockDeleted | 연동된 BudgetItem 없음 | 아무 일도 일어나지 않음 |
 
-### 6-17. WebSocketConfigTest
+### 6-17. TripEventControllerTest (`@SpringBootTest(RANDOM_PORT)`)
 
 | given | when | then |
 |-------|------|------|
-| SockJS `/ws/info` 핸드셰이크 | 허용된 origin(`cors.allowed-origins`) | 200 |
-| SockJS `/ws/info` 핸드셰이크 | 허용되지 않은 origin | 403 |
+| `GET /api/trips/{tripId}/events` | 멤버 | 200 `text/event-stream`, 첫 이벤트로 자신이 포함된 `PRESENCE` |
+| `GET /api/trips/{tripId}/events` | 비멤버 | 403 |
+| `GET /api/trips/{tripId}/events` | 토큰 없음 | 401 |
+
+### 6-17-1. BlockLockConcurrencyTest (`@SpringBootTest`)
+
+바깥 트랜잭션이 잠긴 블록을 먼저 읽은 뒤, 별도 트랜잭션(REQUIRES_NEW)이 같은 블록을 바꿔 커밋하고, 바깥 트랜잭션에서 잠금 연장 · 해제를 실행한다.
+
+| given | when | then |
+|-------|------|------|
+| refreshLocks (연장) | 읽은 뒤 잠금자가 placeName 수정 | 수정 유지, 만료만 연장 (예외 없음) |
+| refreshLocks (만료 해제) | 읽은 뒤 다른 사용자가 만료된 잠금을 새로 잡음 | 새 잠금 유지, 해제 목록에 없음 |
+| releaseLocks (연결 종료) | 읽은 뒤 placeName 수정 | 수정 유지, 잠금 해제 |
 
 ### 6-18. WebConfigCorsTest
 
@@ -521,6 +566,9 @@ Mockito는 Kotlin의 `final class` (data class 포함)를 기본 Mock할 수 없
 
 ### 423 상태 코드 검증 방식
 `HttpStatus` enum에 423(`LOCKED`)이 존재하지만, 서비스 코드가 `HttpStatus.valueOf(423)`로 생성하므로 테스트에서도 `.statusCode.value() shouldBe 423`으로 숫자 값을 직접 비교한다.
+
+### 잠금 만료 시각 검증
+`BlockService`는 `Clock`을 생성자로 받는다 (기본값 `Clock.systemDefaultZone()`). 테스트는 `Clock.fixed`를 넘겨 "지금"을 고정하고, 만료 시각을 지금 기준 앞뒤로 둔 블록으로 만료 판단 · 연장(지금 + 3분)을 정확한 값으로 비교한다. `makeBlock(lockedBy = ...)`은 기본으로 아직 만료되지 않은 잠금(지금 + 1분)을 만든다.
 
 ### `unlockBlock` 상태 직접 검증
 `unlockBlock`은 반환값이 없다. 실행 후 블록 엔티티의 `lockedBy` 필드를 직접 읽어 상태 변이를 확인한다. `verify`로 Repository 호출을 검증하는 대신 엔티티 상태를 보는 것이 의도를 더 명확히 표현한다.

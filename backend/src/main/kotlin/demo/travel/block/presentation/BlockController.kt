@@ -7,8 +7,8 @@ import demo.travel.block.presentation.dto.BlockRequest
 import demo.travel.block.presentation.dto.BlockResponse
 import demo.travel.common.exception.VersionConflictException
 import demo.travel.user.User
-import demo.travel.websocket.TripEvent
-import demo.travel.websocket.TripEventPublisher
+import demo.travel.sse.TripEvent
+import demo.travel.sse.TripEventPublisher
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.*
