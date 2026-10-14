@@ -13,13 +13,11 @@ import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.matchers.shouldBe
 import io.mockk.*
-import org.springframework.data.redis.core.StringRedisTemplate
-import org.springframework.data.redis.core.ValueOperations
+import org.springframework.data.repository.findByIdOrNull
 import org.springframework.http.HttpStatus
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
 import org.springframework.web.server.ResponseStatusException
 import java.util.*
-import java.util.concurrent.TimeUnit
 
 class AuthServiceTest : BehaviorSpec({
 
@@ -27,10 +25,9 @@ class AuthServiceTest : BehaviorSpec({
     val jwtProvider = mockk<JwtProvider>()
     val kakaoOAuthClient = mockk<KakaoOAuthClient>()
     val googleOAuthClient = mockk<GoogleOAuthClient>()
-    val redisTemplate = mockk<StringRedisTemplate>()
-    val opsForValue = mockk<ValueOperations<String, String>>()
+    val refreshTokenRepository = mockk<RefreshTokenRepository>()
 
-    val service = AuthService(userRepository, jwtProvider, kakaoOAuthClient, googleOAuthClient, redisTemplate)
+    val service = AuthService(userRepository, jwtProvider, kakaoOAuthClient, googleOAuthClient, refreshTokenRepository)
 
     val userId = UUID.randomUUID()
     val accessToken = "test.access.token"
@@ -39,10 +36,9 @@ class AuthServiceTest : BehaviorSpec({
 
     beforeEach {
         clearAllMocks()
-        every { redisTemplate.opsForValue() } returns opsForValue
         every { jwtProvider.generate(any()) } returns accessToken
         every { jwtProvider.generateRefresh(any()) } returns refreshToken
-        every { opsForValue.set(any(), any(), any<Long>(), any<TimeUnit>()) } just Runs
+        every { refreshTokenRepository.save(any()) } answers { firstArg() }
     }
 
     given("signup") {
@@ -59,6 +55,7 @@ class AuthServiceTest : BehaviorSpec({
                 result.accessToken shouldBe accessToken
                 result.refreshToken shouldBe refreshToken
                 verify { userRepository.save(any()) }
+                verify { refreshTokenRepository.save(match { it.userId == userId && it.token == refreshToken }) }
             }
         }
 
@@ -78,7 +75,7 @@ class AuthServiceTest : BehaviorSpec({
         val localUser = User(id = userId, email = "user@test.com", nickname = "유저", provider = AuthProvider.LOCAL, password = encodedPassword)
 
         `when`("이메일과 비밀번호가 올바를 때") {
-            then("TokenPair를 반환한다") {
+            then("refreshToken을 저장하고 TokenPair를 반환한다") {
                 val command = AuthCommand.Login("user@test.com", "correct123")
                 every { userRepository.findByEmail(command.email) } returns localUser
 
@@ -86,6 +83,7 @@ class AuthServiceTest : BehaviorSpec({
 
                 result.accessToken shouldBe accessToken
                 result.refreshToken shouldBe refreshToken
+                verify { refreshTokenRepository.save(match { it.userId == userId && it.token == refreshToken }) }
             }
         }
 
@@ -122,10 +120,10 @@ class AuthServiceTest : BehaviorSpec({
     }
 
     given("refresh") {
-        `when`("Redis에 저장된 토큰과 일치할 때") {
+        `when`("저장된 토큰과 일치할 때") {
             then("새 accessToken을 반환한다") {
                 every { jwtProvider.parse(refreshToken) } returns userId
-                every { opsForValue.get("refresh:$userId") } returns refreshToken
+                every { refreshTokenRepository.findByIdOrNull(userId) } returns RefreshToken(userId, refreshToken)
 
                 val result = service.refresh(refreshToken)
                 result shouldBe accessToken
@@ -141,10 +139,10 @@ class AuthServiceTest : BehaviorSpec({
             }
         }
 
-        `when`("Redis에 저장된 토큰과 다를 때") {
+        `when`("저장된 토큰과 다를 때") {
             then("401 UNAUTHORIZED를 던진다") {
                 every { jwtProvider.parse(refreshToken) } returns userId
-                every { opsForValue.get("refresh:$userId") } returns "other.stored.token"
+                every { refreshTokenRepository.findByIdOrNull(userId) } returns RefreshToken(userId, "other.stored.token")
 
                 val ex = shouldThrow<ResponseStatusException> { service.refresh(refreshToken) }
                 ex.statusCode shouldBe HttpStatus.UNAUTHORIZED
@@ -154,23 +152,23 @@ class AuthServiceTest : BehaviorSpec({
 
     given("logout") {
         `when`("유효한 refreshToken이 전달될 때") {
-            then("Redis에서 토큰을 삭제한다") {
+            then("저장된 토큰을 삭제한다") {
                 every { jwtProvider.parse(refreshToken) } returns userId
-                every { redisTemplate.delete(any<String>()) } returns true
+                every { refreshTokenRepository.deleteById(userId) } just Runs
 
                 service.logout(refreshToken)
 
-                verify { redisTemplate.delete("refresh:$userId") }
+                verify { refreshTokenRepository.deleteById(userId) }
             }
         }
 
         `when`("파싱 불가한 토큰이 전달될 때") {
-            then("Redis 삭제 없이 조용히 종료한다") {
+            then("삭제 없이 조용히 종료한다") {
                 every { jwtProvider.parse(any()) } returns null
 
                 service.logout("invalid.token")
 
-                verify(exactly = 0) { redisTemplate.delete(any<String>()) }
+                verify(exactly = 0) { refreshTokenRepository.deleteById(any()) }
             }
         }
     }

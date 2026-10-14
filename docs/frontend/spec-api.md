@@ -103,7 +103,7 @@ GET /api/auth/me
 POST /api/auth/logout
 ```
 **응답** `204 No Content`
-- Redis에서 refreshToken 삭제 + refreshToken 쿠키 만료
+- 서버에 저장된 refreshToken 삭제 + refreshToken 쿠키 만료
 - 인증 불필요
 
 ### 비밀번호 재설정 코드 발송
@@ -115,7 +115,7 @@ POST /api/auth/password-reset/request
 { "email": "string" }
 ```
 **응답** `200 OK`
-- 이메일로 6자리 인증 코드 발송, Redis에 15분간 보관
+- 이메일로 6자리 인증 코드 발송, 서버 메모리에 15분간 보관 (서버 재시작 시 사라짐)
 - LOCAL 계정에만 코드를 발송한다. 가입되지 않은 이메일이나 소셜 로그인 계정(Kakao/Google)이면 코드 저장·메일 발송 없이 똑같이 `200 OK` (이메일 열거 방지)
 - 인증 불필요
 

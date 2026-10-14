@@ -11,7 +11,7 @@
 - **블록 기반 일정 관리**: Day별로 블록을 자유롭게 드래그 앤 드롭으로 재배치할 수 있으며, `position` 값 기반으로 순서를 관리하고 필요 시 재정규화합니다.
 - **동시 편집 충돌 방지**: 블록 편집 시 잠금(lock)을 걸어 다른 사용자의 동시 수정을 막고, `version` 기반 낙관적 잠금으로 갱신 충돌을 감지해 `409 VERSION_CONFLICT`로 알려줍니다.
 - **AI 일정 자동 생성**: Anthropic Claude API로 목적지·기간·스타일·강도 등 조건에 맞는 일정 초안을 생성하고, 사용자가 선택한 블록만 골라 적용할 수 있습니다. Google Places API로 장소 좌표를 보강합니다.
-- **인증/인가**: 이메일 회원가입·로그인 외에 카카오/구글 소셜 로그인을 지원하며, JWT(access) + Redis 기반 refresh token, 이메일 인증 코드 기반 비밀번호 재설정을 제공합니다.
+- **인증/인가**: 이메일 회원가입·로그인 외에 카카오/구글 소셜 로그인을 지원하며, JWT(access) + DB에 저장하는 refresh token, 이메일 인증 코드 기반 비밀번호 재설정을 제공합니다.
 - **권한 관리**: 여행별로 OWNER/EDITOR/VIEWER 역할을 두어 조회·편집·삭제 권한을 구분합니다.
 - **초대 링크**: 공유 토큰 기반 초대 링크로 VIEWER 권한 멤버를 손쉽게 추가할 수 있습니다.
 - **예산 관리**: 여행별 예산 항목(카테고리, 금액, 메모)을 등록하고 관리하며, 블록에 비용을 입력하면 연동된 예산 항목이 자동으로 생성·갱신됩니다.
@@ -26,7 +26,6 @@
 ![Spring Boot](https://img.shields.io/badge/Spring%20Boot-6DB33F?style=for-the-badge&logo=springboot&logoColor=white)
 ![Gradle](https://img.shields.io/badge/Gradle-02303A?style=for-the-badge&logo=gradle&logoColor=white)
 ![MySQL](https://img.shields.io/badge/MySQL-4479A1?style=for-the-badge&logo=mysql&logoColor=white)
-![Redis](https://img.shields.io/badge/Redis-DC382D?style=for-the-badge&logo=redis&logoColor=white)
 ![JWT](https://img.shields.io/badge/JWT-000000?style=for-the-badge&logo=jsonwebtokens&logoColor=white)
 ![Anthropic](https://img.shields.io/badge/Claude-D97757?style=for-the-badge&logo=anthropic&logoColor=white)
 ![Google](https://img.shields.io/badge/Google-4285F4?style=for-the-badge&logo=google&logoColor=white)
@@ -57,7 +56,7 @@
 ## 실행 방법
 
 ```bash
-# 백엔드 (MySQL, Redis 실행 후)
+# 백엔드 (MySQL 실행 후)
 cd backend
 ./gradlew bootRun
 ```
