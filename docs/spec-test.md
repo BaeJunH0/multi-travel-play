@@ -180,6 +180,7 @@ spring:
 | `block/BlockServiceTest.kt` | `BlockService` | 24 |
 | `budget/BudgetServiceTest.kt` | `BudgetService` | 10 |
 | `ai/AiServiceTest.kt` | `AiService.apply` | 3 |
+| `ai/AnthropicClientTest.kt` | `AnthropicClient.parse` (Messages API 응답 파싱) | 6 |
 | `block/BlockControllerTest.kt` | `BlockController` 충돌 브로드캐스트 | 3 |
 | `websocket/PresenceStoreTest.kt` | `PresenceStore.leaveSession` | 4 |
 | `websocket/PresenceDisconnectListenerTest.kt` | `PresenceDisconnectListener` | 2 |
@@ -322,7 +323,18 @@ spring:
 | apply | block에 쓰지 않는 카테고리(ETC) 포함 | 400 BAD_REQUEST, 아무것도 저장 안 함 |
 | apply | VIEWER | 403 FORBIDDEN |
 
-### 6-3-2. BlockController
+### 6-3-2. AnthropicClient.parse
+
+| given | when | then |
+|-------|------|------|
+| parse | thinking 블록 다음에 text 블록 | text 블록의 JSON 파싱 |
+| parse | text 블록만 있음 | text 블록의 JSON 파싱 |
+| parse | text가 마크다운 코드블록으로 감싸짐 | 코드블록 표시를 벗겨내고 파싱 |
+| parse | `stop_reason`이 `max_tokens` | 502 `AI_RESPONSE_INVALID` |
+| parse | text 블록 없음 (thinking만) | 502 `AI_RESPONSE_INVALID` |
+| parse | text가 JSON이 아님 | 502 `AI_RESPONSE_INVALID` |
+
+### 6-3-3. BlockController
 
 | given | when | then |
 |-------|------|------|
@@ -330,7 +342,7 @@ spring:
 | updateBlock | 정상 수정 | `UPDATE`만 브로드캐스트 |
 | moveBlock | version 충돌 | `CONFLICT` 브로드캐스트, `VersionConflictException` 재전파, `MOVE` 미발행 |
 
-### 6-3-3. PresenceStore / PresenceDisconnectListener
+### 6-3-4. PresenceStore / PresenceDisconnectListener
 
 | given | when | then |
 |-------|------|------|

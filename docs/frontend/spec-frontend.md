@@ -177,6 +177,7 @@ interface Block {
 - "전체" 태그 선택 시 나머지 태그 전체 해제 (요청 `tags: []`)
 - 적용 Day 선택 UI는 없다 — `targetDays`에 여행의 모든 Day를 담아 보낸다
 - "생성하기" 클릭 시 `POST /api/trips/{tripId}/ai/generate` 호출 → 2단계로 이동
+  - 실패 시(AI 응답 해석 실패 `502 AI_RESPONSE_INVALID` 포함) "AI 생성에 실패했습니다." 토스트
 
 #### 2단계: 결과 확인 및 Day 배치
 - 생성된 블록 목록을 체크박스 리스트로 표시
@@ -187,7 +188,7 @@ interface Block {
 - "← 다시 설정" 클릭 시 1단계로 돌아감
 - "에디터에 추가하기" 클릭 시 `POST /api/trips/{tripId}/ai/apply` 호출 → 3단계로 이동
   - 선택한 블록의 내용 전체(`tempId`, `blockType`, `placeName`, `startTime`, `durationMin`, `cost`, `memo`)와 `dayNumber`, `position`을 실어 보낸다 (서버 stateless)
-  - `position`은 Day별로 1.0부터 순서대로 매긴다
+  - `position`은 Day별로 그 Day의 현재 최대 position 다음부터 1.0씩 증가시켜 매긴다 (블록이 없는 Day는 1.0부터)
 
 #### 3단계: 완료
 - "N개 블록이 추가됐어요" 완료 메시지
