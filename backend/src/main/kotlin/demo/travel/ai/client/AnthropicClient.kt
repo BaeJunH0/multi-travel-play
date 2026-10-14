@@ -1,10 +1,14 @@
 package demo.travel.ai.client
 
+import com.fasterxml.jackson.annotation.JsonProperty
 import demo.travel.ai.client.properties.AnthropicProperties
 import demo.travel.ai.presentation.dto.AiBlock
+import demo.travel.common.exception.BusinessException
+import org.springframework.http.HttpStatus
 import org.springframework.http.client.JdkClientHttpRequestFactory
 import org.springframework.stereotype.Component
 import org.springframework.web.client.RestClient
+import tools.jackson.core.JacksonException
 import tools.jackson.databind.ObjectMapper
 import tools.jackson.module.kotlin.readValue
 import java.net.http.HttpClient
@@ -36,33 +40,61 @@ class AnthropicClient(
             ),
         )
 
-        val response = restClient.post()
+        val responseBody = restClient.post()
             .uri("/v1/messages")
             .body(body)
             .retrieve()
-            .body(MessagesResponse::class.java)!!
+            .body(String::class.java)!!
 
-        val text = response.content.first().text
-            .trim()
-            .removePrefix("```json").removePrefix("```")
-            .removeSuffix("```").trim()
+        return parse(responseBody)
+    }
 
-        return objectMapper.readValue<BlocksPayload>(text).blocks.map { b ->
-            AiBlock(
-                tempId = b.tempId,
-                blockType = enumValueOf(b.blockType),
-                placeName = b.placeName,
-                startTime = b.startTime,
-                durationMin = b.durationMin,
-                cost = b.cost,
-                suggestedDay = b.suggestedDay,
-                memo = b.memo,
-            )
+    /**
+     * Messages API 응답 본문에서 일정 블록을 꺼낸다.
+     * adaptive thinking이 켜져 있으면 content가 thinking 블록으로 시작할 수 있어서 type이 text인 블록을 고른다.
+     */
+    internal fun parse(responseBody: String): List<AiBlock> {
+        try {
+            val response = objectMapper.readValue<MessagesResponse>(responseBody)
+            if (response.stopReason != "end_turn") {
+                throw invalidResponse("AI 응답이 완료되지 않았습니다 (stop_reason: ${response.stopReason}). 다시 시도해 주세요.")
+            }
+            val text = response.content.firstOrNull { it.type == "text" }?.text
+                ?: throw invalidResponse("AI 응답에 텍스트가 없습니다. 다시 시도해 주세요.")
+
+            val json = text
+                .trim()
+                .removePrefix("```json").removePrefix("```")
+                .removeSuffix("```").trim()
+
+            return objectMapper.readValue<BlocksPayload>(json).blocks.map { b ->
+                AiBlock(
+                    tempId = b.tempId,
+                    blockType = enumValueOf(b.blockType),
+                    placeName = b.placeName,
+                    startTime = b.startTime,
+                    durationMin = b.durationMin,
+                    cost = b.cost,
+                    suggestedDay = b.suggestedDay,
+                    memo = b.memo,
+                )
+            }
+        } catch (e: JacksonException) {
+            throw invalidResponse("AI 응답을 해석하지 못했습니다. 다시 시도해 주세요.")
+        } catch (e: IllegalArgumentException) {
+            // 알 수 없는 blockType (enumValueOf 실패)
+            throw invalidResponse("AI 응답을 해석하지 못했습니다. 다시 시도해 주세요.")
         }
     }
 
-    private data class MessagesResponse(val content: List<ContentBlock>)
-    private data class ContentBlock(val text: String)
+    private fun invalidResponse(message: String) =
+        BusinessException("AI_RESPONSE_INVALID", message, HttpStatus.BAD_GATEWAY)
+
+    private data class MessagesResponse(
+        val content: List<ContentBlock>,
+        @JsonProperty("stop_reason") val stopReason: String?,
+    )
+    private data class ContentBlock(val type: String, val text: String?)
 
     private data class BlocksPayload(val blocks: List<RawBlock>)
     private data class RawBlock(
