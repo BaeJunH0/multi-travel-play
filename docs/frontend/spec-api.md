@@ -525,6 +525,7 @@ POST /api/trips/{tripId}/ai/generate
 }
 ```
 - 서버는 생성 결과를 저장하지 않음 (stateless) — 프론트가 들고 있다가 `apply`에 그대로 실어 보냄
+- AI 응답이 잘렸거나(`stop_reason`이 `end_turn`이 아님, 예: `max_tokens`) 텍스트가 없거나 JSON으로 해석할 수 없으면 `502 AI_RESPONSE_INVALID`
 - 최소 권한: EDITOR
 
 ### AI 일정 적용
@@ -631,4 +632,5 @@ Presence 발행:   /app/trip.{tripId}.presence
 | 409 | `VERSION_CONFLICT` | 블록 version 불일치 |
 | 423 | `ALREADY_LOCKED` | 다른 사용자가 블록 잠금 중 |
 | 400 | `INVALID_RESET_TOKEN` | 비밀번호 재설정 코드 불일치 또는 만료 (미가입·소셜 계정 포함) |
+| 502 | `AI_RESPONSE_INVALID` | AI 응답을 해석할 수 없음 (응답 잘림·텍스트 없음·JSON 형식 오류) |
 | 500 | `INTERNAL_ERROR` | 서버 오류 |
