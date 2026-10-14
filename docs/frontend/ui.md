@@ -237,6 +237,7 @@ interface Props {
   open: boolean
   tripId: string
   days: TripDay[]
+  blocks: Block[]   // 현재 블록 — apply 시 Day별 최대 position 계산용
   onClose: () => void
   onApply: (blocks: Array<AiGeneratedBlock & { dayNumber: number }>) => void
 }
@@ -264,6 +265,7 @@ interface Props {
 - "선택된 N개" 카운트
 - "← 다시 설정" → Step 1로 복귀
 - "에디터에 추가하기" → `POST /ai/apply` (선택 블록 내용 전체 + `dayNumber` + `position`) → Step 3
+  - `position` = 해당 Day의 현재 최대 position + 1.0, 1.0씩 증가 (블록이 없는 Day는 1.0부터)
 
 **Step 3 — 완료**
 - "N개 블록이 추가됐어요" 메시지

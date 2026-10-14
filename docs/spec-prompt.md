@@ -36,6 +36,9 @@
 ```
 
 ## 응답 파싱 처리
-1. Claude 응답 텍스트에서 JSON 추출
-2. `tempId` 기준으로 클라이언트 응답에 포함해 반환
-3. `placeName` 으로 Google Places API 조회 → `lat` / `lng` 보정 후 DB 저장 (`/ai/apply` 단계)
+1. `stop_reason`이 `end_turn`인지 확인 — 아니면(예: `max_tokens`로 잘림) 실패
+2. `content`에서 `type`이 `text`인 첫 블록을 고름 (adaptive thinking이 켜져 있으면 `thinking` 블록이 먼저 올 수 있음)
+3. 텍스트에서 마크다운 코드블록 표시(```` ```json ````, ```` ``` ````)를 벗겨내고 JSON 파싱
+   - 1~3단계 중 하나라도 실패하면 `502 AI_RESPONSE_INVALID`
+4. `tempId` 기준으로 클라이언트 응답에 포함해 반환
+5. `placeName` 으로 Google Places API 조회 → `lat` / `lng` 보정 후 DB 저장 (`/ai/apply` 단계)

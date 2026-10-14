@@ -103,7 +103,7 @@ GET /api/auth/me
 POST /api/auth/logout
 ```
 **응답** `204 No Content`
-- Redis에서 refreshToken 삭제 + refreshToken 쿠키 만료
+- 서버에 저장된 refreshToken 삭제 + refreshToken 쿠키 만료
 - 인증 불필요
 
 ### 비밀번호 재설정 코드 발송
@@ -115,7 +115,7 @@ POST /api/auth/password-reset/request
 { "email": "string" }
 ```
 **응답** `200 OK`
-- 이메일로 6자리 인증 코드 발송, Redis에 15분간 보관
+- 이메일로 6자리 인증 코드 발송, 서버 메모리에 15분간 보관 (서버 재시작 시 사라짐)
 - LOCAL 계정에만 코드를 발송한다. 가입되지 않은 이메일이나 소셜 로그인 계정(Kakao/Google)이면 코드 저장·메일 발송 없이 똑같이 `200 OK` (이메일 열거 방지)
 - 인증 불필요
 
@@ -301,7 +301,7 @@ PATCH /api/trips/{tripId}/blocks/{blockId}/move
 **응답** — 이동된 Block 객체
 
 **에러**: version 불일치 시 `409 VERSION_CONFLICT` (+ `CONFLICT` 이벤트 브로드캐스트)
-- 잠금 여부는 확인하지 않음 (다른 사용자가 잠근 블록도 이동 가능)
+- 다른 사용자가 잠금 중이면 `423 ALREADY_LOCKED`
 - 최소 권한: EDITOR
 
 ### 블록 삭제
@@ -525,6 +525,7 @@ POST /api/trips/{tripId}/ai/generate
 }
 ```
 - 서버는 생성 결과를 저장하지 않음 (stateless) — 프론트가 들고 있다가 `apply`에 그대로 실어 보냄
+- AI 응답이 잘렸거나(`stop_reason`이 `end_turn`이 아님, 예: `max_tokens`) 텍스트가 없거나 JSON으로 해석할 수 없으면 `502 AI_RESPONSE_INVALID`
 - 최소 권한: EDITOR
 
 ### AI 일정 적용
@@ -631,4 +632,5 @@ Presence 발행:   /app/trip.{tripId}.presence
 | 409 | `VERSION_CONFLICT` | 블록 version 불일치 |
 | 423 | `ALREADY_LOCKED` | 다른 사용자가 블록 잠금 중 |
 | 400 | `INVALID_RESET_TOKEN` | 비밀번호 재설정 코드 불일치 또는 만료 (미가입·소셜 계정 포함) |
+| 502 | `AI_RESPONSE_INVALID` | AI 응답을 해석할 수 없음 (응답 잘림·텍스트 없음·JSON 형식 오류) |
 | 500 | `INTERNAL_ERROR` | 서버 오류 |

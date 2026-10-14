@@ -5,19 +5,17 @@ import demo.travel.common.exception.BusinessException
 import demo.travel.user.AuthProvider
 import demo.travel.user.UserRepository
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.data.redis.core.StringRedisTemplate
 import org.springframework.mail.SimpleMailMessage
 import org.springframework.mail.javamail.JavaMailSender
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
-import java.util.concurrent.TimeUnit
 
 @Service
 class PasswordResetService(
     private val userRepository: UserRepository,
     private val jwtProvider: JwtProvider,
-    private val redisTemplate: StringRedisTemplate,
+    private val codeStore: PasswordResetCodeStore,
     @Autowired(required = false) private val mailSender: JavaMailSender?,
 ) {
     private val passwordEncoder = BCryptPasswordEncoder()
@@ -28,7 +26,7 @@ class PasswordResetService(
         if (user.provider != AuthProvider.LOCAL) return
 
         val code = (100_000..999_999).random().toString()
-        redisTemplate.opsForValue().set(resetKey(email), code, 15, TimeUnit.MINUTES)
+        codeStore.save(email, code)
 
         val message = SimpleMailMessage().apply {
             setTo(email)
@@ -52,19 +50,17 @@ class PasswordResetService(
     @Transactional
     fun confirmReset(command: PasswordResetCommand.Confirm): String {
         // 실패 사유(미가입·소셜 계정·코드 불일치)를 구분하지 않는다 (이메일 열거 공격 방지)
-        val stored = redisTemplate.opsForValue().get(resetKey(command.email))
+        val stored = codeStore.find(command.email)
         if (stored == null || stored != command.token) throw invalidResetToken()
 
         val user = userRepository.findByEmail(command.email) ?: throw invalidResetToken()
         if (user.provider != AuthProvider.LOCAL) throw invalidResetToken()
 
         user.changePassword(passwordEncoder.encode(command.newPassword)!!)
-        redisTemplate.delete(resetKey(command.email))
+        codeStore.remove(command.email)
 
         return jwtProvider.generate(user.id)
     }
-
-    private fun resetKey(email: String) = "password-reset:$email"
 
     private fun invalidResetToken() =
         BusinessException("INVALID_RESET_TOKEN", "인증 코드가 올바르지 않거나 만료됐습니다.")

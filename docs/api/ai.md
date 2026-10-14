@@ -34,6 +34,7 @@ POST /api/trips/{tripId}/ai/generate
 }
 ```
 - 서버는 생성 결과를 저장하지 않음 (stateless) — 프론트가 들고 있다가 `apply`에 그대로 실어 보냄
+- AI 응답이 잘렸거나(`stop_reason`이 `end_turn`이 아님, 예: `max_tokens`) 텍스트가 없거나 JSON으로 해석할 수 없으면 `502 AI_RESPONSE_INVALID`
 - 최소 권한: EDITOR
 
 ### AI 일정 적용

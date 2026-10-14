@@ -372,6 +372,7 @@ export default function TripEditorPage() {
         open={aiModalOpen}
         tripId={tripId!}
         days={trip.days}
+        blocks={blocks}
         onClose={() => setAiModalOpen(false)}
         onApply={handleAiApply}
       />

@@ -178,7 +178,8 @@ Day 헤더의 "+" 클릭
   └─ position 계산 (두 인접 블록의 중간값)
        └─ 로컬 상태 즉시 반영 (낙관적)
             └─ PATCH /blocks/:blockId/move
-                 └─ gap < 1e-4이면 POST /blocks/reorder
+                 ├─ 성공 → gap < 1e-4이면 POST /blocks/reorder
+                 └─ 실패 (423, 다른 사용자가 잠금 중) → 이전 위치로 복구 + "OO님이 편집 중입니다." 토스트
 ```
 
 ### 다른 Day로 이동
@@ -265,13 +266,14 @@ TopBar "AI 생성" 버튼 클릭
   └─ "생성하기" 클릭
        └─ POST /api/trips/:tripId/ai/generate
             ├─ 성공 → Step 2
-            └─ 실패 → "AI 생성에 실패했습니다" 토스트
+            └─ 실패 → "AI 생성에 실패했습니다" 토스트 (AI 응답 해석 실패 `502 AI_RESPONSE_INVALID` 포함)
 
 [Step 2] 결과 확인 및 Day 배치
   ├─ 체크박스로 원하는 블록 선택/해제
   ├─ 각 블록의 배치 Day를 드롭다운으로 변경 가능
   ├─ "← 다시 설정" → Step 1 (기존 생성 결과 유지)
   └─ "에디터에 추가하기" (선택된 개수 > 0)
+       └─ 각 Day의 현재 최대 position 다음부터 1.0씩 position 부여
        └─ POST /api/trips/:tripId/ai/apply
             ├─ 성공 → Step 3 + 로컬 블록 상태에 추가
             └─ 실패 → "일정 적용에 실패했습니다" 토스트

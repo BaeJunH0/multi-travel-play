@@ -175,10 +175,12 @@ spring:
 |------|------------|------------|
 | `auth/AuthServiceTest.kt` | `AuthService` | 13 |
 | `auth/PasswordResetServiceTest.kt` | `PasswordResetService` | 7 |
+| `auth/PasswordResetCodeStoreTest.kt` | `PasswordResetCodeStore` (만료는 테스트용 Clock으로 검증) | 5 |
 | `trip/TripServiceTest.kt` | `TripService` | 14 |
-| `block/BlockServiceTest.kt` | `BlockService` | 24 |
+| `block/BlockServiceTest.kt` | `BlockService` | 26 |
 | `budget/BudgetServiceTest.kt` | `BudgetService` | 10 |
 | `ai/AiServiceTest.kt` | `AiService.apply` | 3 |
+| `ai/AnthropicClientTest.kt` | `AnthropicClient.parse` (Messages API 응답 파싱) | 6 |
 | `block/BlockControllerTest.kt` | `BlockController` 충돌 브로드캐스트 | 3 |
 | `websocket/PresenceStoreTest.kt` | `PresenceStore.leaveSession` | 4 |
 | `websocket/PresenceDisconnectListenerTest.kt` | `PresenceDisconnectListener` | 2 |
@@ -193,6 +195,7 @@ spring:
 | `trip/TripRepositoryTest.kt` | `TripRepository`, `TripMemberRepository` | 9 |
 | `block/BlockRepositoryTest.kt` | `BlockRepository` | 7 |
 | `budget/BudgetRepositoryTest.kt` | `BudgetRepository` | 4 |
+| `auth/RefreshTokenPersistenceTest.kt` | `RefreshTokenRepository`, `AuthService.login` → `refresh` | 2 |
 
 ### Domain/Entity 단위 테스트
 
@@ -221,17 +224,17 @@ spring:
 
 | given | when | then |
 |-------|------|------|
-| signup | 이메일 중복 없음 | 유저 저장, TokenPair 반환 |
+| signup | 이메일 중복 없음 | 유저 저장, refreshToken 저장, TokenPair 반환 |
 | signup | 이메일 중복 | 409 CONFLICT |
-| login | 이메일·비밀번호 정상 | TokenPair 반환 |
+| login | 이메일·비밀번호 정상 | refreshToken 저장, TokenPair 반환 |
 | login | 이메일 미존재 | 401 UNAUTHORIZED |
 | login | 비밀번호 불일치 | 401 UNAUTHORIZED |
 | login | 소셜 계정 (password=null) | 401 UNAUTHORIZED |
-| refresh | Redis 저장 토큰과 일치 | 새 accessToken 반환 |
+| refresh | 저장된 토큰과 일치 | 새 accessToken 반환 |
 | refresh | 토큰 파싱 실패 | 401 UNAUTHORIZED |
-| refresh | Redis 저장 토큰과 불일치 | 401 UNAUTHORIZED |
-| logout | 유효한 토큰 | Redis 키 삭제 |
-| logout | 파싱 불가 토큰 | Redis 삭제 없이 종료 |
+| refresh | 저장된 토큰과 불일치 | 401 UNAUTHORIZED |
+| logout | 유효한 토큰 | 저장된 토큰 삭제 |
+| logout | 파싱 불가 토큰 | 삭제 없이 종료 |
 | kakaoLogin | 신규 사용자 | 유저 저장 후 TokenPair |
 | kakaoLogin | 기존 사용자 | 저장 없이 TokenPair |
 
@@ -239,13 +242,30 @@ spring:
 
 | given | when | then |
 |-------|------|------|
-| requestReset | LOCAL 계정 | 코드를 Redis에 15분 저장, 메일 발송 |
+| requestReset | LOCAL 계정 | 코드 저장, 같은 코드를 메일로 발송 |
 | requestReset | 미가입 이메일 | 저장·발송 없이 종료 |
 | requestReset | 소셜 계정 | 저장·발송 없이 종료 |
 | confirmReset | 코드 일치 + LOCAL 계정 | 비밀번호 변경, 코드 삭제, accessToken 반환 |
 | confirmReset | 코드 불일치 | 400 `INVALID_RESET_TOKEN` |
 | confirmReset | 미가입 이메일 | 400 `INVALID_RESET_TOKEN` |
 | confirmReset | 소셜 계정 | 400 `INVALID_RESET_TOKEN`, 비밀번호 유지 |
+
+### 6-1-2. PasswordResetCodeStore
+
+| given | when | then |
+|-------|------|------|
+| find | 저장 후 15분 전 | 저장된 코드 반환 |
+| find | 저장 후 15분 경과 | null |
+| find | 같은 이메일로 재저장 | 마지막 코드만 유효 |
+| find | 저장한 적 없는 이메일 | null |
+| remove | 저장된 코드 삭제 | 이후 find는 null |
+
+### 6-1-3. RefreshTokenPersistenceTest (`@SpringBootTest`)
+
+| given | when | then |
+|-------|------|------|
+| refreshTokenRepository.save | 같은 유저로 재저장 | 행을 새로 만들지 않고 토큰 덮어씀 |
+| authService.login | 이메일 로그인 성공 | 발급한 refreshToken으로 refresh 가능 |
 
 ### 6-2. TripService
 
@@ -284,6 +304,8 @@ spring:
 | updateBlock | 다른 trip의 blockId | 404 NOT_FOUND |
 | moveBlock | version 일치 | dayNumber·position 변경 |
 | moveBlock | version 불일치 | `VersionConflictException` |
+| moveBlock | 타인이 잠금 | 423 LOCKED, 위치 무변경 |
+| moveBlock | 본인이 잠금 | 정상 이동 |
 | deleteBlock | EDITOR | 삭제 실행 |
 | deleteBlock | VIEWER | 403 FORBIDDEN |
 | deleteBlock | 타인이 잠금 | 423 LOCKED, 삭제·이벤트 없음 |
@@ -303,7 +325,18 @@ spring:
 | apply | block에 쓰지 않는 카테고리(ETC) 포함 | 400 BAD_REQUEST, 아무것도 저장 안 함 |
 | apply | VIEWER | 403 FORBIDDEN |
 
-### 6-3-2. BlockController
+### 6-3-2. AnthropicClient.parse
+
+| given | when | then |
+|-------|------|------|
+| parse | thinking 블록 다음에 text 블록 | text 블록의 JSON 파싱 |
+| parse | text 블록만 있음 | text 블록의 JSON 파싱 |
+| parse | text가 마크다운 코드블록으로 감싸짐 | 코드블록 표시를 벗겨내고 파싱 |
+| parse | `stop_reason`이 `max_tokens` | 502 `AI_RESPONSE_INVALID` |
+| parse | text 블록 없음 (thinking만) | 502 `AI_RESPONSE_INVALID` |
+| parse | text가 JSON이 아님 | 502 `AI_RESPONSE_INVALID` |
+
+### 6-3-3. BlockController
 
 | given | when | then |
 |-------|------|------|
@@ -311,7 +344,7 @@ spring:
 | updateBlock | 정상 수정 | `UPDATE`만 브로드캐스트 |
 | moveBlock | version 충돌 | `CONFLICT` 브로드캐스트, `VersionConflictException` 재전파, `MOVE` 미발행 |
 
-### 6-3-3. PresenceStore / PresenceDisconnectListener
+### 6-3-4. PresenceStore / PresenceDisconnectListener
 
 | given | when | then |
 |-------|------|------|
@@ -484,7 +517,7 @@ spring:
 ## 7. 주요 결정 사항
 
 ### Spring Context 미사용 (Service·Domain 계층)
-`@SpringBootTest` 없이 Service를 직접 생성자로 인스턴스화한다. DB·Redis 연결이 불필요하므로 테스트 실행 속도가 빠르고, CI 환경에서 인프라 의존성이 없다.
+`@SpringBootTest` 없이 Service를 직접 생성자로 인스턴스화한다. DB 연결이 불필요하므로 테스트 실행 속도가 빠르고, CI 환경에서 인프라 의존성이 없다.
 
 ### `@DataJpaTest` + H2 (Repository 계층)
 전체 애플리케이션 컨텍스트 없이 JPA 빈만 로드한다. H2 `MODE=MySQL`로 MySQL 구문을 허용하면서도 외부 인프라 없이 쿼리 메서드를 검증한다.

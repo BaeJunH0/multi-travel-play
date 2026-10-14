@@ -88,7 +88,7 @@ PATCH /api/trips/{tripId}/blocks/{blockId}/move
 **응답** — 이동된 Block 객체
 
 **에러**: version 불일치 시 `409 VERSION_CONFLICT` (+ `CONFLICT` 이벤트 브로드캐스트)
-- 잠금 여부는 확인하지 않음 (다른 사용자가 잠근 블록도 이동 가능)
+- 다른 사용자가 잠금 중이면 `423 ALREADY_LOCKED`
 - 최소 권한: EDITOR
 
 ### 블록 삭제
