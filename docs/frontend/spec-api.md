@@ -532,6 +532,9 @@ POST /api/trips/{tripId}/ai/generate
 }
 ```
 - 서버는 생성 결과를 저장하지 않음 (stateless) — 프론트가 들고 있다가 `apply`에 그대로 실어 보냄
+- AI 응답이 잘렸거나(`stop_reason`이 `end_turn`이 아님, 예: `max_tokens`) 텍스트가 없거나 JSON으로 해석할 수 없으면 `502 AI_RESPONSE_INVALID`
+- Anthropic API가 일시적으로 실패하면(429·5xx·529·시간 초과·연결 실패) `503 AI_UNAVAILABLE`, 그 외 4xx로 거부하면 `502 AI_REQUEST_FAILED`. 서버는 자동 재시도하지 않는다
+- 생성에는 수십 초가 걸릴 수 있다 (서버 read timeout 120초)
 - 최소 권한: EDITOR
 
 ### AI 일정 적용
@@ -664,4 +667,7 @@ POST /api/trips/{tripId}/presence
 | 409 | `VERSION_CONFLICT` | 블록 version 불일치 |
 | 423 | `ALREADY_LOCKED` | 다른 사용자가 블록 잠금 중 |
 | 400 | `INVALID_RESET_TOKEN` | 비밀번호 재설정 코드 불일치 또는 만료 (미가입·소셜 계정 포함) |
+| 502 | `AI_RESPONSE_INVALID` | AI 응답을 해석할 수 없음 (응답 잘림·텍스트 없음·JSON 형식 오류) |
+| 502 | `AI_REQUEST_FAILED` | Anthropic API가 요청을 거부함 (키·모델·요청 문제 등 429를 제외한 4xx). 상세는 서버 로그 |
+| 503 | `AI_UNAVAILABLE` | Anthropic API 일시 오류 (429·5xx·529 overloaded·시간 초과·연결 실패). 잠시 후 다시 시도 |
 | 500 | `INTERNAL_ERROR` | 서버 오류 |

@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
 import { X, Sparkles, ChevronLeft, Check } from 'lucide-react'
 import toast from 'react-hot-toast'
-import type { BlockType, TripDay, AiGeneratedBlock } from '../../types'
+import { isAxiosError } from 'axios'
+import type { Block, BlockType, TripDay, AiGeneratedBlock } from '../../types'
 import { BLOCK_STYLE } from '../../types'
 import { aiApi } from '../../services/aiApi'
 import BlockTypeBadge from '../ui/BlockTypeBadge'
@@ -10,13 +11,14 @@ interface Props {
   open: boolean
   tripId: string
   days: TripDay[]
+  blocks: Block[]
   onClose: () => void
   onApply: (blocks: Array<AiGeneratedBlock & { dayNumber: number }>) => void
 }
 
 type Step = 1 | 2 | 3
 
-export default function AiModal({ open, tripId, days, onClose, onApply }: Props) {
+export default function AiModal({ open, tripId, days, blocks, onClose, onApply }: Props) {
   const [step, setStep] = useState<Step>(1)
   const [selectedTypes, setSelectedTypes] = useState<BlockType[]>([])
   const [allTypes, setAllTypes] = useState(true)
@@ -62,8 +64,9 @@ export default function AiModal({ open, tripId, days, onClose, onApply }: Props)
       })
       setGenerated(data.blocks.map((b) => ({ ...b, dayNumber: b.suggestedDay, checked: true })))
       setStep(2)
-    } catch {
-      toast.error('AI 생성에 실패했습니다.')
+    } catch (err) {
+      // 503 AI_UNAVAILABLE(잠시 후 재시도) / 502 등은 서버 메시지를 그대로 보여준다
+      toast.error((isAxiosError(err) && err.response?.data?.message) || 'AI 생성에 실패했습니다.')
     } finally {
       setLoading(false)
     }
@@ -76,7 +79,9 @@ export default function AiModal({ open, tripId, days, onClose, onApply }: Props)
       // 각 Day의 마지막 position 뒤로 배치
       const dayMaxPos: Record<number, number> = {}
       const selectedBlocks = selected.map((b) => {
-        dayMaxPos[b.dayNumber] = (dayMaxPos[b.dayNumber] ?? 0) + 1.0
+        const currentMax = dayMaxPos[b.dayNumber]
+          ?? Math.max(0, ...blocks.filter((x) => x.dayNumber === b.dayNumber).map((x) => x.position))
+        dayMaxPos[b.dayNumber] = currentMax + 1.0
         return {
           tempId: b.tempId,
           blockType: b.blockType,

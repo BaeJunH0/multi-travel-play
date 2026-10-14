@@ -180,6 +180,7 @@ spring:
 | `block/BlockServiceTest.kt` | `BlockService` (잠금 만료는 테스트용 Clock으로 검증) | 33 |
 | `budget/BudgetServiceTest.kt` | `BudgetService` | 10 |
 | `ai/AiServiceTest.kt` | `AiService.apply` | 3 |
+| `ai/AnthropicClientTest.kt` | `AnthropicClient.parse` (Messages API 응답 파싱), `toAiException` (API 오류 매핑) | 9 |
 | `block/BlockControllerTest.kt` | `BlockController` 충돌 브로드캐스트 | 3 |
 | `sse/PresenceStoreTest.kt` | `PresenceStore`, `PresenceUser.avatarColorOf` | 5 |
 | `sse/TripConnectionRegistryTest.kt` | `TripConnectionRegistry`, `TripConnection.send` | 6 |
@@ -333,7 +334,21 @@ spring:
 | apply | block에 쓰지 않는 카테고리(ETC) 포함 | 400 BAD_REQUEST, 아무것도 저장 안 함 |
 | apply | VIEWER | 403 FORBIDDEN |
 
-### 6-3-2. BlockController
+### 6-3-2. AnthropicClient.parse / toAiException
+
+| given | when | then |
+|-------|------|------|
+| parse | thinking 블록 다음에 text 블록 | text 블록의 JSON 파싱 |
+| parse | text 블록만 있음 | text 블록의 JSON 파싱 |
+| parse | text가 마크다운 코드블록으로 감싸짐 | 코드블록 표시를 벗겨내고 파싱 |
+| parse | `stop_reason`이 `max_tokens` | 502 `AI_RESPONSE_INVALID` |
+| parse | text 블록 없음 (thinking만) | 502 `AI_RESPONSE_INVALID` |
+| parse | text가 JSON이 아님 | 502 `AI_RESPONSE_INVALID` |
+| toAiException | 429·500·529 응답 | 503 `AI_UNAVAILABLE` |
+| toAiException | 400·401·404 응답 | 502 `AI_REQUEST_FAILED` |
+| toAiException | 시간 초과 (`ResourceAccessException`) | 503 `AI_UNAVAILABLE` |
+
+### 6-3-3. BlockController
 
 | given | when | then |
 |-------|------|------|
@@ -341,7 +356,7 @@ spring:
 | updateBlock | 정상 수정 | `UPDATE`만 브로드캐스트 |
 | moveBlock | version 충돌 | `CONFLICT` 브로드캐스트, `VersionConflictException` 재전파, `MOVE` 미발행 |
 
-### 6-3-3. PresenceStore
+### 6-3-4. PresenceStore
 
 | given | when | then |
 |-------|------|------|
@@ -351,7 +366,7 @@ spring:
 | leave | 같은 trip의 한 유저 | 그 유저만 제거 |
 | avatarColorOf | userId | 예전 프론트 계산과 같은 색 (해시가 음수인 경우 포함) |
 
-### 6-3-4. TripConnectionRegistry
+### 6-3-5. TripConnectionRegistry
 
 | given | when | then |
 |-------|------|------|
@@ -362,7 +377,7 @@ spring:
 | of | 여러 trip 연결이 섞여 있음 | 해당 trip 연결만 반환 |
 | TripConnection.send | 전송 실패 | `completeWithError`, false |
 
-### 6-3-5. TripEventStream
+### 6-3-6. TripEventStream
 
 | given | when | then |
 |-------|------|------|
