@@ -10,7 +10,11 @@ import io.kotest.matchers.shouldBe
 import io.mockk.every
 import io.mockk.mockk
 import org.springframework.http.HttpStatus
+import org.springframework.http.HttpStatusCode
+import org.springframework.web.client.ResourceAccessException
+import org.springframework.web.client.RestClientResponseException
 import tools.jackson.module.kotlin.jacksonObjectMapper
+import java.net.http.HttpTimeoutException
 
 class AnthropicClientTest : BehaviorSpec({
 
@@ -78,6 +82,41 @@ class AnthropicClientTest : BehaviorSpec({
                 val ex = shouldThrow<BusinessException> { client.parse(response("end_turn", textBlock("일정을 만들 수 없습니다."))) }
                 ex.code shouldBe "AI_RESPONSE_INVALID"
                 ex.status shouldBe HttpStatus.BAD_GATEWAY
+            }
+        }
+    }
+
+    given("toAiException") {
+        fun apiError(status: Int) = RestClientResponseException(
+            "error", HttpStatusCode.valueOf(status), "error", null,
+            """{"type":"error","error":{"type":"some_error","message":"msg"}}""".toByteArray(), Charsets.UTF_8,
+        )
+
+        `when`("429·500·529처럼 다시 시도하면 되는 응답일 때") {
+            then("503 AI_UNAVAILABLE로 바꾼다") {
+                listOf(429, 500, 529).forEach { status ->
+                    val ex = client.toAiException(apiError(status))
+                    ex.code shouldBe "AI_UNAVAILABLE"
+                    ex.status shouldBe HttpStatus.SERVICE_UNAVAILABLE
+                }
+            }
+        }
+
+        `when`("400·401·404처럼 키·모델·요청 문제일 때") {
+            then("502 AI_REQUEST_FAILED로 바꾼다") {
+                listOf(400, 401, 404).forEach { status ->
+                    val ex = client.toAiException(apiError(status))
+                    ex.code shouldBe "AI_REQUEST_FAILED"
+                    ex.status shouldBe HttpStatus.BAD_GATEWAY
+                }
+            }
+        }
+
+        `when`("timeout·연결 실패일 때") {
+            then("503 AI_UNAVAILABLE로 바꾼다") {
+                val ex = client.toAiException(ResourceAccessException("timeout", HttpTimeoutException("timed out")))
+                ex.code shouldBe "AI_UNAVAILABLE"
+                ex.status shouldBe HttpStatus.SERVICE_UNAVAILABLE
             }
         }
     }
