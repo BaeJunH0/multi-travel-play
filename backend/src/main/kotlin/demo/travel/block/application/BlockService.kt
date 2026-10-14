@@ -117,22 +117,25 @@ class BlockService(
 
     /** 유저가 해당 여행에서 잡고 있던 잠금을 모두 해제하고, 해제한 blockId 목록을 반환한다. (마지막 SSE 연결 종료 시) */
     fun releaseLocks(tripId: UUID, userId: UUID): List<UUID> =
-        blockRepository.findAllByTripIdAndLockedById(tripId, userId).map { release(it); it.id }
+        blockRepository.findAllByTripIdAndLockedById(tripId, userId)
+            .map { it.id }
+            .filter { blockRepository.releaseLock(it, userId) == 1 }
 
     /**
      * heartbeat마다 호출한다. [connected]는 SSE 연결이 살아 있는 (tripId, userId) 목록.
      * 연결된 잠금자의 잠금은 만료를 연장하고, 그 외 만료된 잠금은 해제한다.
      * 해제한 잠금의 (tripId, blockId) 목록을 반환한다.
+     * 읽은 뒤 바뀐 블록(다른 사용자가 새로 잠금 등)은 UPDATE 조건에서 걸러진다.
      */
     fun refreshLocks(connected: Set<Pair<UUID, UUID>>): List<Pair<UUID, UUID>> {
+        val now = now()
         val released = mutableListOf<Pair<UUID, UUID>>()
         blockRepository.findAllByLockedByIsNotNull().forEach { block ->
-            when {
-                (block.trip.id to block.lockedBy!!.id) in connected -> block.lockExpiresAt = now().plus(LOCK_TTL)
-                isLockExpired(block) -> {
-                    release(block)
-                    released += block.trip.id to block.id
-                }
+            val lockedById = block.lockedBy!!.id
+            if ((block.trip.id to lockedById) in connected) {
+                blockRepository.extendLock(block.id, lockedById, now.plus(LOCK_TTL))
+            } else if (isLockExpired(block) && blockRepository.releaseExpiredLock(block.id, now) == 1) {
+                released += block.trip.id to block.id
             }
         }
         return released

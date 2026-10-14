@@ -177,7 +177,7 @@ spring:
 | `auth/PasswordResetServiceTest.kt` | `PasswordResetService` | 7 |
 | `auth/PasswordResetCodeStoreTest.kt` | `PasswordResetCodeStore` (만료는 테스트용 Clock으로 검증) | 5 |
 | `trip/TripServiceTest.kt` | `TripService` | 14 |
-| `block/BlockServiceTest.kt` | `BlockService` (잠금 만료는 테스트용 Clock으로 검증) | 32 |
+| `block/BlockServiceTest.kt` | `BlockService` (잠금 만료는 테스트용 Clock으로 검증) | 33 |
 | `budget/BudgetServiceTest.kt` | `BudgetService` | 10 |
 | `ai/AiServiceTest.kt` | `AiService.apply` | 3 |
 | `block/BlockControllerTest.kt` | `BlockController` 충돌 브로드캐스트 | 3 |
@@ -212,6 +212,7 @@ spring:
 
 | 파일 | 대상 | 방식 |
 |------|------|------|
+| `block/BlockLockConcurrencyTest.kt` | heartbeat 잠금 연장 · 해제와 동시 요청이 겹칠 때 | `@SpringBootTest` + `TransactionTemplate`(REQUIRES_NEW)로 두 트랜잭션을 끼워 넣음 |
 | `sse/TripEventControllerTest.kt` | `GET /api/trips/{tripId}/events` 인증 · 권한 · 첫 `PRESENCE` | `@SpringBootTest(RANDOM_PORT)` + 실제 HTTP 요청 |
 | `config/WebConfigCorsTest.kt` | `WebConfig`의 REST `/api/**` CORS | `@SpringBootTest(RANDOM_PORT)` + 실제 preflight 요청 |
 | `TravelApplicationTests.kt` | 애플리케이션 컨텍스트 로딩 (`contextLoads`) | `@SpringBootTest` + JUnit `@Test` |
@@ -317,10 +318,11 @@ spring:
 | lockBlock | 타인이 잠금 | 423 LOCKED |
 | unlockBlock | 본인 잠금 | lockedBy · lockExpiresAt = null |
 | unlockBlock | 타인 잠금 | lockedBy 유지 (무변경) |
-| releaseLocks | 유저가 trip에서 잠금 2개 보유 | 모두 해제, 해제한 blockId 목록 반환 |
-| refreshLocks | 잠금자의 연결이 살아 있음 (만료 지남) | 만료를 지금 + 3분으로 연장 |
-| refreshLocks | 잠금자 연결 없음 + 만료 지남 | 해제, (tripId, blockId) 반환 |
-| refreshLocks | 잠금자 연결 없음 + 만료 전 | 잠금 · 만료 시각 유지 |
+| releaseLocks | 유저가 trip에서 잠금 2개 보유, 그중 1개는 그 사이 바뀜 | 블록마다 `releaseLock`, 실제 해제된(1행) blockId만 반환 |
+| refreshLocks | 잠금자의 연결이 살아 있음 (만료 지남) | `extendLock`으로 만료를 지금 + 3분으로 연장 |
+| refreshLocks | 잠금자 연결 없음 + 만료 지남 | `releaseExpiredLock`, (tripId, blockId) 반환 |
+| refreshLocks | 만료 지남, 그 사이 다른 사용자가 잠금 (0행) | 해제 목록에 넣지 않음 |
+| refreshLocks | 잠금자 연결 없음 + 만료 전 | UPDATE 호출 없음 |
 | reorderBlocks | Day별 복수 블록 | Day 내 1.0, 2.0, 3.0 ... 재정규화 |
 
 ### 6-3-1. AiService.apply
@@ -525,6 +527,16 @@ spring:
 | `GET /api/trips/{tripId}/events` | 멤버 | 200 `text/event-stream`, 첫 이벤트로 자신이 포함된 `PRESENCE` |
 | `GET /api/trips/{tripId}/events` | 비멤버 | 403 |
 | `GET /api/trips/{tripId}/events` | 토큰 없음 | 401 |
+
+### 6-17-1. BlockLockConcurrencyTest (`@SpringBootTest`)
+
+바깥 트랜잭션이 잠긴 블록을 먼저 읽은 뒤, 별도 트랜잭션(REQUIRES_NEW)이 같은 블록을 바꿔 커밋하고, 바깥 트랜잭션에서 잠금 연장 · 해제를 실행한다.
+
+| given | when | then |
+|-------|------|------|
+| refreshLocks (연장) | 읽은 뒤 잠금자가 placeName 수정 | 수정 유지, 만료만 연장 (예외 없음) |
+| refreshLocks (만료 해제) | 읽은 뒤 다른 사용자가 만료된 잠금을 새로 잡음 | 새 잠금 유지, 해제 목록에 없음 |
+| releaseLocks (연결 종료) | 읽은 뒤 placeName 수정 | 수정 유지, 잠금 해제 |
 
 ### 6-18. WebConfigCorsTest
 
