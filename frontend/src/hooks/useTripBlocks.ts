@@ -94,6 +94,9 @@ export function useTripBlocks(tripId: string, initial: Block[]) {
         const latest: Block = err.response.data.currentBlock ?? prev
         setBlocks((cur) => cur.map((b) => b.id === blockId ? latest : b))
         toast.error('다른 사용자가 수정했습니다.')
+      } else if (err.response?.status === 423) {
+        setBlocks((cur) => cur.map((b) => b.id === blockId ? prev : b))
+        toast.error(lockedMessage(prev.lockedByNickname))
       } else {
         setBlocks((cur) => cur.map((b) => b.id === blockId ? prev : b))
         toast.error('이동에 실패했습니다.')

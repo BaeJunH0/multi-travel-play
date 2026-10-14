@@ -77,7 +77,7 @@ src/
 - `useWebSocket`: STOMP over SockJS로 `/ws` 연결, `/topic/trip.{tripId}` 구독
 - `useTripBlocks`: Optimistic Update 적용 후 WebSocket 이벤트로 최종 상태 동기화
 - version 충돌(`409 VERSION_CONFLICT`) 시 응답의 `currentBlock`으로 교체하고 토스트를 한 번 띄운다. 다른 접속자는 `CONFLICT` 이벤트로 같은 블록을 동기화한다
-- 블록 잠금은 `lockedBy`를 현재 유저 id와 비교해 "내가 편집 중" / "OO 편집 중"으로 구분한다. 잠금 · 삭제가 `423 ALREADY_LOCKED`면 "OO님이 편집 중입니다." 토스트를 띄운다
+- 블록 잠금은 `lockedBy`를 현재 유저 id와 비교해 "내가 편집 중" / "OO 편집 중"으로 구분한다. 잠금 · 이동 · 삭제가 `423 ALREADY_LOCKED`면 "OO님이 편집 중입니다." 토스트를 띄운다
 - Presence는 연결 시와 활성 Day 변경 시 `{ userId, nickname, avatarColor, activeDay }`로 발행한다
 
 | 이벤트 | 처리 |

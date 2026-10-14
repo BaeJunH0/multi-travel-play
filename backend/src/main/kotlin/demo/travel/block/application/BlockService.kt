@@ -79,6 +79,7 @@ class BlockService(
     fun moveBlock(command: BlockCommand.Move): BlockResult {
         requireEditorOrAbove(command.tripId, command.userId)
         val block = findBlockOrThrow(command.blockId, command.tripId)
+        checkLock(block, command.userId)
         checkVersion(block, command.version)
 
         block.dayNumber = command.dayNumber
