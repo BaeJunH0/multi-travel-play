@@ -177,7 +177,7 @@ spring:
 | `auth/PasswordResetServiceTest.kt` | `PasswordResetService` | 7 |
 | `auth/PasswordResetCodeStoreTest.kt` | `PasswordResetCodeStore` (만료는 테스트용 Clock으로 검증) | 5 |
 | `trip/TripServiceTest.kt` | `TripService` | 14 |
-| `block/BlockServiceTest.kt` | `BlockService` | 24 |
+| `block/BlockServiceTest.kt` | `BlockService` | 26 |
 | `budget/BudgetServiceTest.kt` | `BudgetService` | 10 |
 | `ai/AiServiceTest.kt` | `AiService.apply` | 3 |
 | `block/BlockControllerTest.kt` | `BlockController` 충돌 브로드캐스트 | 3 |
@@ -303,6 +303,8 @@ spring:
 | updateBlock | 다른 trip의 blockId | 404 NOT_FOUND |
 | moveBlock | version 일치 | dayNumber·position 변경 |
 | moveBlock | version 불일치 | `VersionConflictException` |
+| moveBlock | 타인이 잠금 | 423 LOCKED, 위치 무변경 |
+| moveBlock | 본인이 잠금 | 정상 이동 |
 | deleteBlock | EDITOR | 삭제 실행 |
 | deleteBlock | VIEWER | 403 FORBIDDEN |
 | deleteBlock | 타인이 잠금 | 423 LOCKED, 삭제·이벤트 없음 |

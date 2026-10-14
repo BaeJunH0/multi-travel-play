@@ -178,7 +178,8 @@ Day 헤더의 "+" 클릭
   └─ position 계산 (두 인접 블록의 중간값)
        └─ 로컬 상태 즉시 반영 (낙관적)
             └─ PATCH /blocks/:blockId/move
-                 └─ gap < 1e-4이면 POST /blocks/reorder
+                 ├─ 성공 → gap < 1e-4이면 POST /blocks/reorder
+                 └─ 실패 (423, 다른 사용자가 잠금 중) → 이전 위치로 복구 + "OO님이 편집 중입니다." 토스트
 ```
 
 ### 다른 Day로 이동

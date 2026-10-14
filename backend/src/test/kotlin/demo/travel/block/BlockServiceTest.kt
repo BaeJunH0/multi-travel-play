@@ -246,6 +246,31 @@ class BlockServiceTest : BehaviorSpec({
                 shouldThrow<VersionConflictException> { service.moveBlock(command) }
             }
         }
+
+        `when`("다른 사용자가 잠근 블록일 때") {
+            then("423 LOCKED를 던지고 위치를 바꾸지 않는다") {
+                val block = makeBlock(version = 0L, lockedBy = otherUser)
+                every { tripMemberRepository.findByTripIdAndUserId(tripId, userId) } returns memberWith(TripRole.EDITOR)
+                every { blockRepository.findByIdOrNull(blockId) } returns block
+
+                val ex = shouldThrow<ResponseStatusException> { service.moveBlock(command) }
+                ex.statusCode.value() shouldBe 423
+                block.dayNumber shouldBe 1
+                block.position shouldBe 1.0
+            }
+        }
+
+        `when`("본인이 잠근 블록일 때") {
+            then("정상 이동한다") {
+                val block = makeBlock(version = 0L, lockedBy = user)
+                every { tripMemberRepository.findByTripIdAndUserId(tripId, userId) } returns memberWith(TripRole.EDITOR)
+                every { blockRepository.findByIdOrNull(blockId) } returns block
+                every { blockRepository.flush() } just Runs
+
+                val result = service.moveBlock(command)
+                result.dayNumber shouldBe 2
+            }
+        }
     }
 
     given("deleteBlock") {

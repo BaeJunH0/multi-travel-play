@@ -209,6 +209,7 @@ interface Block {
 - 블록 간 드롭: 타겟 블록 위/아래에 삽입, 새 position 계산
 - 컬럼 빈 영역 드롭: 해당 Day 마지막 위치에 추가
 - 드롭 후 `PATCH /api/trips/{tripId}/blocks/{blockId}/move` 호출 (서버가 `MOVE` 브로드캐스트)
+- 그 사이 다른 사용자가 잠가 `423 ALREADY_LOCKED`가 오면 이전 위치로 롤백 + "OO님이 편집 중입니다." 토스트
 - 같은 Day 안의 position 최소 간격이 `1e-4` 미만이면 `POST /api/trips/{tripId}/blocks/reorder` 호출
 
 ### 드래그 종료 (dragend)
@@ -261,7 +262,7 @@ const client = new Client({
 | 상황 | 처리 |
 |------|------|
 | 타인 잠금 블록 | 편집/삭제 버튼 미노출, 드래그 차단 |
-| 잠금 획득 · 삭제 시 `423 ALREADY_LOCKED` | "OO님이 편집 중입니다." 토스트 (닉네임 모르면 "다른 사용자가 편집 중입니다.") |
+| 잠금 획득 · 이동 · 삭제 시 `423 ALREADY_LOCKED` | "OO님이 편집 중입니다." 토스트 (닉네임 모르면 "다른 사용자가 편집 중입니다.") |
 | version 충돌 (`409 VERSION_CONFLICT`) | 서버 최신 블록(`currentBlock`)으로 교체 + 토스트 1회 |
 | WebSocket 연결 끊김 | 자동 재연결 시도 (STOMP `reconnectDelay: 3000`) |
 | API 에러 | 토스트 알림으로 메시지 표시, 낙관적 업데이트 롤백 |
