@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react'
 import toast from 'react-hot-toast'
+import { isAxiosError } from 'axios'
 import { blockApi } from '../services/blockApi'
 import type { Block, BlockType, WsMessage } from '../types'
 
@@ -106,9 +107,13 @@ export function useTripBlocks(tripId: string, initial: Block[]) {
     setBlocks((cur) => cur.filter((b) => b.id !== blockId))
     try {
       await blockApi.deleteBlock(tripId, blockId)
-    } catch {
+    } catch (err) {
       setBlocks(prev)
-      toast.error('삭제에 실패했습니다.')
+      if (isAxiosError(err) && err.response?.status === 423) {
+        toast.error(lockedMessage(prev.find((b) => b.id === blockId)?.lockedByNickname ?? null))
+      } else {
+        toast.error('삭제에 실패했습니다.')
+      }
     }
   }, [tripId, blocks])
 
@@ -121,3 +126,7 @@ export function useTripBlocks(tripId: string, initial: Block[]) {
 
   return { blocks, setBlocks, handleWsMessage, addBlock, updateBlock, moveBlock, deleteBlock, lockBlock, unlockBlock }
 }
+
+// 423 ALREADY_LOCKED 안내 문구
+export const lockedMessage = (nickname: string | null) =>
+  nickname ? `${nickname}님이 편집 중입니다.` : '다른 사용자가 편집 중입니다.'

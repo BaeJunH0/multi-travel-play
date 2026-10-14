@@ -2,11 +2,12 @@ import { useState, useEffect } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { ChevronLeft, Link2, Sparkles, Users, Wallet, Plus } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { isAxiosError } from 'axios'
 import type { Block, BlockType, TripDetail, Presence, AiGeneratedBlock } from '../types'
 import { BLOCK_STYLE } from '../types'
 import { tripApi } from '../services/tripApi'
 import { blockApi } from '../services/blockApi'
-import { useTripBlocks } from '../hooks/useTripBlocks'
+import { useTripBlocks, lockedMessage } from '../hooks/useTripBlocks'
 import { useWebSocket } from '../hooks/useWebSocket'
 import DayColumn from '../components/DayColumn'
 import BlockModal from '../components/modals/BlockModal'
@@ -81,7 +82,14 @@ export default function TripEditorPage() {
   }
 
   const handleEditBlock = async (block: Block) => {
-    try { await lockBlock(block.id) } catch { toast.error('다른 사용자가 편집 중입니다.'); return }
+    try {
+      await lockBlock(block.id)
+    } catch (err) {
+      toast.error(isAxiosError(err) && err.response?.status === 423
+        ? lockedMessage(block.lockedByNickname)
+        : '편집을 시작하지 못했습니다.')
+      return
+    }
     setEditingBlock(block)
     setBlockModalOpen(true)
   }
