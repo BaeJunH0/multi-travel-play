@@ -44,3 +44,9 @@ out/
 
 ### Local-only docs ###
 docs/project/
+
+### AI tools ###
+.claude/
+CLAUDE.md
+CLAUDE.local.md
+.mcp.json
