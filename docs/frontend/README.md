@@ -11,7 +11,7 @@
 | Routing | React Router v7 |
 | Styling | Tailwind CSS v4 |
 | HTTP | Axios |
-| 실시간 | @stomp/stompjs + SockJS |
+| 실시간 | SSE (@microsoft/fetch-event-source) |
 | 상태 관리 | React 내장 (useState / useCallback / Context 없이 Props drilling) |
 | DnD | HTML5 Drag and Drop API |
 | Toast | react-hot-toast |
@@ -33,7 +33,7 @@ src/
 ├── components/     # 재사용 UI 컴포넌트
 │   ├── modals/     # BlockModal, AiModal, MemberModal, BudgetModal
 │   └── ui/         # BlockTypeBadge, AvatarStack
-├── hooks/          # useWebSocket, useTripBlocks
+├── hooks/          # useTripEvents, useTripBlocks
 ├── services/       # API 모듈 (axios)
 ├── store/          # accessToken · 현재 유저 메모리 스토어
 ├── types/          # 타입 정의 + BLOCK_STYLE 상수
@@ -48,6 +48,6 @@ src/
 | [auth.md](./auth.md) | 토큰 전략, 로그인/로그아웃, 라우팅 가드 |
 | [spec-api.md](./spec-api.md) | REST API 엔드포인트 전체 정리 (원본은 [docs/api/](../api/)) |
 | [spec-frontend.md](./spec-frontend.md) | 화면 · 컴포넌트 · 동작 명세 |
-| [websocket.md](./websocket.md) | STOMP 연결, 이벤트 처리, Optimistic Update |
+| [events.md](./events.md) | SSE 연결, 이벤트 처리, Optimistic Update, 잠금 |
 | [ui.md](./ui.md) | 컴포넌트 구조, Props, 스타일 규칙 |
 | [user-flows.md](./user-flows.md) | 주요 시나리오별 사용자 플로우 |

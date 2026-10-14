@@ -8,7 +8,7 @@ import { BLOCK_STYLE } from '../types'
 import { tripApi } from '../services/tripApi'
 import { blockApi } from '../services/blockApi'
 import { useTripBlocks, lockedMessage } from '../hooks/useTripBlocks'
-import { useWebSocket } from '../hooks/useWebSocket'
+import { useTripEvents } from '../hooks/useTripEvents'
 import DayColumn from '../components/DayColumn'
 import BlockModal from '../components/modals/BlockModal'
 import AiModal from '../components/modals/AiModal'
@@ -35,7 +35,7 @@ export default function TripEditorPage() {
   const [draggedBlockId, setDraggedBlockId] = useState<string | null>(null)
   const [dragTargetInfo, setDragTargetInfo] = useState<{ blockId: string; pos: 'above' | 'below' } | null>(null)
 
-  const { blocks, setBlocks, handleWsMessage, addBlock, updateBlock, moveBlock, deleteBlock, lockBlock, unlockBlock } =
+  const { blocks, setBlocks, handleTripEvent, addBlock, updateBlock, moveBlock, deleteBlock, lockBlock, unlockBlock } =
     useTripBlocks(tripId!, [])
 
   // 초기 데이터 로드
@@ -50,15 +50,15 @@ export default function TripEditorPage() {
       .finally(() => setLoading(false))
   }, [tripId])
 
-  // WebSocket
-  useWebSocket({
+  // 실시간 이벤트 (SSE)
+  useTripEvents({
     tripId: tripId!,
     activeDay,
     onMessage: (msg) => {
       if (msg.action === 'PRESENCE') {
         setPresence((msg.payload as any).users)
       } else {
-        handleWsMessage(msg)
+        handleTripEvent(msg)
       }
     },
   })

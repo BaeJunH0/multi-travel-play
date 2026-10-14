@@ -15,6 +15,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.data.repository.findByIdOrNull
 import java.time.LocalDate
+import java.time.LocalDateTime
 
 @SpringBootTest
 class BlockRepositoryTest : BehaviorSpec() {
@@ -151,6 +152,22 @@ class BlockRepositoryTest : BehaviorSpec() {
 
                     val reloaded = blockRepository.findByIdOrNull(block.id)!!
                     reloaded.version shouldBe versionBefore
+                }
+            }
+
+            `when`("잠금 만료 시각만 연장하고 저장할 때") {
+                then("version이 증가하지 않는다") {
+                    val user = savedUser("lock2")
+                    val trip = savedTrip(user)
+                    val block = savedBlock(trip, user, dayNumber = 1, position = 1.0)
+                    val versionBefore = block.version
+
+                    block.lockExpiresAt = LocalDateTime.of(2026, 10, 14, 12, 0)
+                    blockRepository.saveAndFlush(block)
+
+                    val reloaded = blockRepository.findByIdOrNull(block.id)!!
+                    reloaded.version shouldBe versionBefore
+                    reloaded.lockExpiresAt shouldBe LocalDateTime.of(2026, 10, 14, 12, 0)
                 }
             }
         }

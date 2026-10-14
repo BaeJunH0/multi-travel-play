@@ -27,7 +27,7 @@ export const auth = {
 ```
 
 모듈 스코프 변수로 관리하므로 어떤 컴포넌트에서든 import해서 사용 가능합니다.
-현재 유저(`_user`)는 Presence 발행과 "내 잠금" 판별(`lockedBy === auth.getUser()?.id`)에 사용합니다.
+현재 유저(`_user`)는 "내 잠금" 판별(`lockedBy === auth.getUser()?.id`)에 사용합니다.
 
 ---
 

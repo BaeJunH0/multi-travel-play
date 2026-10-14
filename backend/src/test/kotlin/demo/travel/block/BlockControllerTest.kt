@@ -8,9 +8,9 @@ import demo.travel.common.TripCategory
 import demo.travel.common.exception.VersionConflictException
 import demo.travel.user.AuthProvider
 import demo.travel.user.User
-import demo.travel.websocket.ConflictPayload
-import demo.travel.websocket.TripEvent
-import demo.travel.websocket.TripEventPublisher
+import demo.travel.sse.ConflictPayload
+import demo.travel.sse.TripEvent
+import demo.travel.sse.TripEventPublisher
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.BehaviorSpec
 import io.mockk.*

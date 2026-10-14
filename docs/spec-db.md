@@ -49,6 +49,7 @@ cost          INT
 memo          TEXT
 version       BIGINT NOT NULL DEFAULT 0
 locked_by     UUID REFERENCES users(id)             -- NULL = 잠금 해제 상태
+lock_expires_at TIMESTAMP                           -- 잠금 만료 시각 (안전망 TTL 3분, 잠금자의 SSE 연결이 살아 있으면 heartbeat마다 연장). 만료됐거나 NULL이면 잠금이 없는 것으로 취급
 created_by    UUID NOT NULL REFERENCES users(id)
 created_at    TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 updated_at    TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
@@ -82,3 +83,6 @@ memo      VARCHAR(255)
 - 맨 앞 삽입: `newPosition = prevPosition - 1.0`
 - 맨 뒤 삽입: `newPosition = lastPosition + 1.0`
 - `position` 값 간격이 `1e-9` 미만으로 좁아지면 `/api/trips/{tripId}/blocks/reorder` 로 전체 재정규화 (1.0, 2.0, 3.0 ...)
+
+## 서버 메모리에 두는 상태
+SSE 연결과 접속자(presence)는 DB가 아니라 서버 메모리(`TripConnectionRegistry`, `PresenceStore`)에 둔다 (단일 인스턴스 전제). 서버를 재시작하면 클라이언트가 다시 연결하면서 복구된다. 재시작 전에 잡혀 있던 잠금은 `lock_expires_at`이 지나면 해제된다.

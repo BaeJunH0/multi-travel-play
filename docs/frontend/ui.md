@@ -76,15 +76,15 @@ interface Props {
 **상태:**
 - `trip: TripDetail | null` — 여행 정보 + days
 - `presence: Presence[]` — 실시간 접속자
-- `activeDay: number | null` — 마지막으로 누른 Day 컬럼 (Presence에 실어 보냄)
+- `activeDay: number | null` — 마지막으로 누른 Day 컬럼 (Presence로 서버에 보냄)
 - `blockModalOpen / aiModalOpen / memberModalOpen / budgetModalOpen: boolean` — 모달 열림 상태
 - `editingBlock: Block | null` — 편집 중인 블록 (null이면 추가 모드)
 - `draggedBlockId: string | null` — 드래그 중인 블록 ID
 - `dragTargetInfo: { blockId, pos } | null` — 드롭 대상 위치
 
 **핵심 훅:**
-- `useTripBlocks(tripId, [])` — 블록 상태 + CRUD + WS 메시지 처리
-- `useWebSocket({ tripId, activeDay, onMessage })` — STOMP 연결 + Presence 발행. `onMessage`에서 `PRESENCE`는 `setPresence`, 나머지는 `handleWsMessage`로 분기
+- `useTripBlocks(tripId, [])` — 블록 상태 + CRUD + SSE 이벤트 처리
+- `useTripEvents({ tripId, activeDay, onMessage })` — SSE 연결 + 활성 Day 전송. `onMessage`에서 `PRESENCE`는 `setPresence`, 나머지는 `handleTripEvent`로 분기
 
 **TopBar 구성:**
 - `←` 뒤로 가기 (여행 목록으로)

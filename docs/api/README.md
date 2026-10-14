@@ -22,7 +22,7 @@
 | 멤버 (Member) | [member.md](./member.md) |
 | 예산 (Budget) | [budget.md](./budget.md) |
 | AI 일정 생성 | [ai.md](./ai.md) |
-| WebSocket (STOMP) | [websocket.md](./websocket.md) |
+| 실시간 이벤트 (SSE) | [events.md](./events.md) |
 
 ---
 

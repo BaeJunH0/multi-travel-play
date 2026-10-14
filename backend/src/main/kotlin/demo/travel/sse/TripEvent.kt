@@ -1,4 +1,4 @@
-package demo.travel.websocket
+package demo.travel.sse
 
 import demo.travel.block.presentation.dto.BlockResponse
 import java.util.*

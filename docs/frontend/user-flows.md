@@ -93,11 +93,12 @@
        └─ GET /api/trips/:tripId/blocks → 블록 목록
             └─ 로딩 완료 → 보드 렌더링
 
-  └─ useWebSocket 연결 (STOMP)
-       └─ Presence 발행 { userId, nickname, avatarColor, activeDay }
-            └─ PRESENCE 수신 → 접속자 목록 → TopBar 업데이트
-  └─ 활성 Day가 바뀌면 Presence 재발행
+  └─ useTripEvents 연결 (SSE, GET /api/trips/:tripId/events)
+       └─ 서버가 접속자로 자동 등록 → PRESENCE 수신 → 접속자 목록 → TopBar 업데이트
+       └─ 연결 직후 POST /api/trips/:tripId/presence { activeDay }
+  └─ 활성 Day가 바뀌면 POST /presence 다시 호출
   └─ 다른 접속자가 탭을 닫거나 연결이 끊기면 서버가 PRESENCE를 다시 브로드캐스트
+       └─ 그 접속자가 잡고 있던 잠금도 풀리고 블록마다 UNLOCK 수신
 ```
 
 ---
@@ -291,7 +292,7 @@ TopBar "AI 생성" 버튼 클릭
 사용자 A가 블록 수정
   └─ A: 낙관적으로 로컬 상태 즉시 업데이트
        └─ REST PATCH 호출
-            └─ 서버: WebSocket UPDATE 브로드캐스트
+            └─ 서버: SSE로 UPDATE 브로드캐스트
                  └─ 사용자 B: UPDATE 수신 → 블록 상태 업데이트
 
 두 사용자가 같은 블록을 동시에 수정하는 경우
