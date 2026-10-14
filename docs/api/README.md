@@ -39,4 +39,6 @@
 | 423 | `ALREADY_LOCKED` | 다른 사용자가 블록 잠금 중 |
 | 400 | `INVALID_RESET_TOKEN` | 비밀번호 재설정 코드 불일치 또는 만료 (미가입·소셜 계정 포함) |
 | 502 | `AI_RESPONSE_INVALID` | AI 응답을 해석할 수 없음 (응답 잘림·텍스트 없음·JSON 형식 오류) |
+| 502 | `AI_REQUEST_FAILED` | Anthropic API가 요청을 거부함 (키·모델·요청 문제 등 429를 제외한 4xx). 상세는 서버 로그 |
+| 503 | `AI_UNAVAILABLE` | Anthropic API 일시 오류 (429·5xx·529 overloaded·시간 초과·연결 실패). 잠시 후 다시 시도 |
 | 500 | `INTERNAL_ERROR` | 서버 오류 |

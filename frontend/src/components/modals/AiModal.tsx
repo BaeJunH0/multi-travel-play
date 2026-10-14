@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { X, Sparkles, ChevronLeft, Check } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { isAxiosError } from 'axios'
 import type { Block, BlockType, TripDay, AiGeneratedBlock } from '../../types'
 import { BLOCK_STYLE } from '../../types'
 import { aiApi } from '../../services/aiApi'
@@ -63,8 +64,9 @@ export default function AiModal({ open, tripId, days, blocks, onClose, onApply }
       })
       setGenerated(data.blocks.map((b) => ({ ...b, dayNumber: b.suggestedDay, checked: true })))
       setStep(2)
-    } catch {
-      toast.error('AI 생성에 실패했습니다.')
+    } catch (err) {
+      // 503 AI_UNAVAILABLE(잠시 후 재시도) / 502 등은 서버 메시지를 그대로 보여준다
+      toast.error((isAxiosError(err) && err.response?.data?.message) || 'AI 생성에 실패했습니다.')
     } finally {
       setLoading(false)
     }

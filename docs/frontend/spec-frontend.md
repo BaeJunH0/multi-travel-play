@@ -177,7 +177,7 @@ interface Block {
 - "전체" 태그 선택 시 나머지 태그 전체 해제 (요청 `tags: []`)
 - 적용 Day 선택 UI는 없다 — `targetDays`에 여행의 모든 Day를 담아 보낸다
 - "생성하기" 클릭 시 `POST /api/trips/{tripId}/ai/generate` 호출 → 2단계로 이동
-  - 실패 시(AI 응답 해석 실패 `502 AI_RESPONSE_INVALID` 포함) "AI 생성에 실패했습니다." 토스트
+  - 실패 시 서버 에러 메시지를 토스트로 표시 (`503 AI_UNAVAILABLE` "잠시 후 다시 시도", `502 AI_RESPONSE_INVALID`·`AI_REQUEST_FAILED` 등). 메시지가 없으면 "AI 생성에 실패했습니다."
 
 #### 2단계: 결과 확인 및 Day 배치
 - 생성된 블록 목록을 체크박스 리스트로 표시

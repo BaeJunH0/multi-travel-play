@@ -180,7 +180,7 @@ spring:
 | `block/BlockServiceTest.kt` | `BlockService` | 26 |
 | `budget/BudgetServiceTest.kt` | `BudgetService` | 10 |
 | `ai/AiServiceTest.kt` | `AiService.apply` | 3 |
-| `ai/AnthropicClientTest.kt` | `AnthropicClient.parse` (Messages API 응답 파싱) | 6 |
+| `ai/AnthropicClientTest.kt` | `AnthropicClient.parse` (Messages API 응답 파싱), `toAiException` (API 오류 매핑) | 9 |
 | `block/BlockControllerTest.kt` | `BlockController` 충돌 브로드캐스트 | 3 |
 | `websocket/PresenceStoreTest.kt` | `PresenceStore.leaveSession` | 4 |
 | `websocket/PresenceDisconnectListenerTest.kt` | `PresenceDisconnectListener` | 2 |
@@ -325,7 +325,7 @@ spring:
 | apply | block에 쓰지 않는 카테고리(ETC) 포함 | 400 BAD_REQUEST, 아무것도 저장 안 함 |
 | apply | VIEWER | 403 FORBIDDEN |
 
-### 6-3-2. AnthropicClient.parse
+### 6-3-2. AnthropicClient.parse / toAiException
 
 | given | when | then |
 |-------|------|------|
@@ -335,6 +335,9 @@ spring:
 | parse | `stop_reason`이 `max_tokens` | 502 `AI_RESPONSE_INVALID` |
 | parse | text 블록 없음 (thinking만) | 502 `AI_RESPONSE_INVALID` |
 | parse | text가 JSON이 아님 | 502 `AI_RESPONSE_INVALID` |
+| toAiException | 429·500·529 응답 | 503 `AI_UNAVAILABLE` |
+| toAiException | 400·401·404 응답 | 502 `AI_REQUEST_FAILED` |
+| toAiException | 시간 초과 (`ResourceAccessException`) | 503 `AI_UNAVAILABLE` |
 
 ### 6-3-3. BlockController
 
