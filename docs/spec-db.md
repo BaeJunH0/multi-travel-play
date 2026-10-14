@@ -12,6 +12,14 @@ password    VARCHAR(255)                          -- LOCAL 전용, 소셜 로그
 created_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 ```
 
+### refresh_tokens
+```sql
+user_id  UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE  -- 유저당 1개, 재로그인 시 덮어씀
+token    VARCHAR(512) NOT NULL                                     -- 발급한 refresh JWT 원문
+```
+
+비밀번호 재설정 코드는 DB가 아니라 서버 메모리(`PasswordResetCodeStore`)에 15분간 보관한다.
+
 ### trips
 ```sql
 id           UUID PRIMARY KEY
