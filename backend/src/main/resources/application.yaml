@@ -2,6 +2,12 @@ spring:
   application:
     name: travel
 
+  # 로컬 실행 시 루트 .env를 읽는다 (작업 디렉터리가 backend/ 또는 루트). OS 환경변수가 우선한다.
+  config:
+    import:
+      - optional:file:../.env[.properties]
+      - optional:file:.env[.properties]
+
   datasource:
     url: ${DB_URL}
     username: ${DB_USERNAME}
