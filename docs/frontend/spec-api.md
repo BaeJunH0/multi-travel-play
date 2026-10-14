@@ -1,10 +1,13 @@
 # 여행 플래너 — API 스펙
 
+> 이 문서는 [docs/api/](../api/)를 한 파일로 합친 사본이다. 내용이 다르면 `docs/api/`가 기준이다.
+
 ## 공통
 
 - Base URL: `/api`
 - 인증: `Authorization: Bearer {accessToken}` (명시된 예외 제외 모든 엔드포인트)
 - Content-Type: `application/json`
+- CORS: `cors.allowed-origins`에 등록된 origin만 허용 (credentials 포함). 허용되지 않은 origin의 preflight는 `403`
 - 에러 응답 형식:
   ```json
   { "code": "ERROR_CODE", "message": "설명" }
@@ -26,7 +29,7 @@ GET /api/auth/oauth2/kakao
 GET /api/auth/oauth2/kakao/callback?code={code}
 ```
 - 카카오로부터 전달받은 code로 토큰 교환 및 유저 upsert
-- 성공 시 refreshToken 쿠키(HttpOnly) 설정 후 `/` 로 redirect
+- 성공 시 refreshToken 쿠키(HttpOnly, `Path=/api/auth`, 7일) + accessToken 쿠키(HttpOnly, `Path=/`, 1시간) 설정 후 `/` 로 redirect
 - 인증 불필요
 
 ### 구글 소셜 로그인 시작
@@ -41,7 +44,7 @@ GET /api/auth/oauth2/google
 GET /api/auth/oauth2/google/callback?code={code}
 ```
 - 구글로부터 전달받은 code로 토큰 교환 및 유저 upsert
-- 성공 시 refreshToken 쿠키(HttpOnly) 설정 후 `/` 로 redirect
+- 성공 시 refreshToken 쿠키(HttpOnly, `Path=/api/auth`, 7일) + accessToken 쿠키(HttpOnly, `Path=/`, 1시간) 설정 후 `/` 로 redirect
 - 인증 불필요
 
 ### 이메일 회원가입
@@ -50,9 +53,9 @@ POST /api/auth/signup
 ```
 **요청**
 ```json
-{ "email": "string", "password": "string", "nickname": "string" }
+{ "email": "string", "password": "string (8자 이상)", "nickname": "string" }
 ```
-**응답** `201 Created`
+**응답** `201 Created` + `Set-Cookie: refreshToken=...; HttpOnly; Path=/api/auth`
 ```json
 { "accessToken": "string" }
 ```
@@ -113,7 +116,7 @@ POST /api/auth/password-reset/request
 ```
 **응답** `200 OK`
 - 이메일로 6자리 인증 코드 발송, Redis에 15분간 보관
-- 소셜 로그인 계정(Kakao/Google) 미지원
+- LOCAL 계정에만 코드를 발송한다. 가입되지 않은 이메일이나 소셜 로그인 계정(Kakao/Google)이면 코드 저장·메일 발송 없이 똑같이 `200 OK` (이메일 열거 방지)
 - 인증 불필요
 
 ### 비밀번호 재설정 확인
@@ -129,6 +132,7 @@ POST /api/auth/password-reset/confirm
 { "accessToken": "string" }
 ```
 **에러**: 코드 불일치/만료 시 `400 INVALID_RESET_TOKEN`
+- 가입되지 않은 이메일, 소셜 로그인 계정도 같은 `400 INVALID_RESET_TOKEN`으로 응답한다 (가입 여부·가입 경로 비노출)
 - 인증 불필요
 
 ---
@@ -195,7 +199,9 @@ GET /api/trips/{tripId}
 ```
 PATCH /api/trips/{tripId}
 ```
-**요청**: `title`, `destination`, `startDate`, `endDate` 부분 수정 가능
+**요청**: `title`, `destination`, `startDate`, `endDate` 부분 수정 가능 (전달된 필드만 반영)
+
+**응답** — TripDetail 객체
 - 최소 권한: EDITOR
 
 ### 여행 삭제
@@ -207,7 +213,7 @@ DELETE /api/trips/{tripId}
 
 ---
 
-## 3. 블록 (Block)
+## 3. 블록 / 잠금 (Block / Lock)
 
 ### 블록 목록 조회
 ```
@@ -252,6 +258,7 @@ POST /api/trips/{tripId}/blocks
 }
 ```
 **응답** `201 Created` — Block 객체 (`position` 은 해당 day 마지막 + 1.0 자동 설정)
+- `blockType`은 `HOTEL | FOOD | CAFE | PLACE | TRANSPORT`만 허용. budget 전용 카테고리(`FLIGHT`, `ETC`)는 `400 INVALID_REQUEST`
 - 최소 권한: EDITOR
 
 ### 블록 수정
@@ -269,10 +276,14 @@ PATCH /api/trips/{tripId}/blocks/{blockId}
   "version": 3
 }
 ```
-**에러**: version 불일치 시 `409`
+**응답** — 수정된 Block 객체
+
+**에러**
+- version 불일치 시 `409` (같은 여행 접속자에게 `CONFLICT` 이벤트도 브로드캐스트)
 ```json
 { "code": "VERSION_CONFLICT", "message": "string", "currentBlock": { } }
 ```
+- 다른 사용자가 잠금 중이면 `423 ALREADY_LOCKED`
 - 최소 권한: EDITOR
 
 ### 블록 이동 (DnD)
@@ -287,7 +298,10 @@ PATCH /api/trips/{tripId}/blocks/{blockId}/move
   "version": 3
 }
 ```
-**에러**: version 불일치 시 `409 VERSION_CONFLICT`
+**응답** — 이동된 Block 객체
+
+**에러**: version 불일치 시 `409 VERSION_CONFLICT` (+ `CONFLICT` 이벤트 브로드캐스트)
+- 잠금 여부는 확인하지 않음 (다른 사용자가 잠근 블록도 이동 가능)
 - 최소 권한: EDITOR
 
 ### 블록 삭제
@@ -295,6 +309,8 @@ PATCH /api/trips/{tripId}/blocks/{blockId}/move
 DELETE /api/trips/{tripId}/blocks/{blockId}
 ```
 **응답** `204 No Content`
+**에러**: 다른 사용자가 잠금 중이면 `423 ALREADY_LOCKED`
+- version은 확인하지 않음
 - 최소 권한: EDITOR
 
 ### Position 재정규화
@@ -304,11 +320,12 @@ POST /api/trips/{tripId}/blocks/reorder
 **응답** `204 No Content`
 - `position` 간격이 `1e-9` 미만으로 좁아졌을 때 호출
 - 각 day 내 블록을 `1.0, 2.0, 3.0 ...` 으로 재정규화
+- WebSocket 이벤트를 발행하지 않음
 - 최소 권한: EDITOR
 
 ---
 
-## 4. 블록 잠금 (Lock)
+### 블록 잠금 (Lock)
 
 ### 잠금 획득 (편집 모달 열릴 때)
 ```
@@ -323,11 +340,12 @@ POST /api/trips/{tripId}/blocks/{blockId}/lock
 DELETE /api/trips/{tripId}/blocks/{blockId}/lock
 ```
 **응답** `204 No Content`
-- 본인이 걸어둔 잠금만 해제됨
+- 본인이 걸어둔 잠금만 해제됨 (다른 사용자의 잠금이면 아무 변화 없이 `204`)
+- 멤버 여부·역할 확인 없음 (블록이 해당 trip에 없으면 `404`)
 
 ---
 
-## 5. 초대 (Invite)
+## 4. 초대 (Invite)
 
 ### 초대 링크 생성
 ```
@@ -371,7 +389,7 @@ POST /api/invite/{shareToken}/accept
 
 ---
 
-## 6. 멤버 (Member)
+## 5. 멤버 (Member)
 
 ### 멤버 목록 조회
 ```
@@ -397,8 +415,10 @@ PATCH /api/trips/{tripId}/members/{userId}
 ```json
 { "role": "EDITOR | VIEWER" }
 ```
-**응답** `200 OK`
+**응답** `200 OK` (본문 없음)
 - OWNER만 가능
+- `role: OWNER` 요청 시 `400` (OWNER 양도 불가)
+- 대상이 OWNER면 `403`, 대상이 멤버가 아니면 `404`
 
 ### 멤버 제거
 ```
@@ -406,10 +426,11 @@ DELETE /api/trips/{tripId}/members/{userId}
 ```
 **응답** `204 No Content`
 - OWNER만 가능
+- 대상이 OWNER면 `403`, 대상이 멤버가 아니면 `404`
 
 ---
 
-## 7. 예산 (Budget)
+## 6. 예산 (Budget)
 
 ### 예산 항목 목록 조회
 ```
@@ -442,6 +463,8 @@ POST /api/trips/{tripId}/budget
   "memo": "string | null"
 }
 ```
+- `amount`는 0 이상
+
 **응답** `201 Created` — BudgetItem 객체 (`blockId`는 항상 `null`)
 - 최소 권한: EDITOR
 
@@ -449,7 +472,9 @@ POST /api/trips/{tripId}/budget
 ```
 PATCH /api/trips/{tripId}/budget/{itemId}
 ```
-**요청**: `category`, `amount`, `memo` 부분 수정 가능
+**요청**: `category`, `amount`, `memo` 부분 수정 가능 (전달된 필드만 반영)
+
+**응답** — BudgetItem 객체
 - 최소 권한: EDITOR
 
 ### 예산 항목 삭제
@@ -466,7 +491,7 @@ DELETE /api/trips/{tripId}/budget/{itemId}
 
 ---
 
-## 8. AI 일정 생성
+## 7. AI 일정 생성
 
 ### AI 일정 생성 요청
 ```
@@ -537,12 +562,13 @@ POST /api/trips/{tripId}/ai/apply
 ```
 - `selectedBlocks`의 내용을 서버가 그대로 저장 (재검증 없음)
 - `tempId`, `blockType`, `placeName`, `dayNumber`, `position`은 필수 — 누락 시 `400 INVALID_REQUEST`
+- `blockType`이 block용(`HOTEL | FOOD | CAFE | PLACE | TRANSPORT`)이 아닌 항목이 하나라도 있으면 아무것도 저장하지 않고 `400 INVALID_REQUEST`
 - Google Places API로 `lat/lng` 자동 보강 (실패 시 null 허용)
 - 최소 권한: EDITOR
 
 ---
 
-## 9. WebSocket (STOMP)
+## 8. WebSocket (STOMP)
 
 ### 연결
 ```
@@ -570,7 +596,7 @@ Presence 발행:   /app/trip.{tripId}.presence
 | `DELETE` | 블록 삭제 | `{ blockId }` |
 | `LOCK` | 잠금 획득 | `{ blockId, lockedBy, lockedByNickname }` |
 | `UNLOCK` | 잠금 해제 | `{ blockId }` |
-| `CONFLICT` | version 충돌 | `{ blockId, currentBlock }` |
+| `CONFLICT` | 블록 수정·이동 시 version 충돌 | `{ blockId, currentBlock }` |
 | `PRESENCE` | 접속자 변경 | `{ users: [{ userId, nickname, avatarColor, activeDay }] }` |
 
 ### Presence 발행 형식
@@ -583,14 +609,17 @@ Presence 발행:   /app/trip.{tripId}.presence
 }
 ```
 
+- 블록 이벤트(`ADD`~`UNLOCK`)는 REST 요청이 성공한 뒤에만 발행된다. `CONFLICT`는 수정·이동 요청이 version 충돌로 실패했을 때 발행된다. `reorder`는 이벤트를 발행하지 않는다.
+- `PRESENCE`는 presence 발행 시, 그리고 접속자의 WebSocket 연결이 끊길 때(탭 닫기·네트워크 끊김 포함) 해당 trip의 전체 접속자 목록을 브로드캐스트한다. 같은 유저가 여러 탭으로 접속했다면 마지막 연결이 끊길 때 목록에서 빠진다.
+
 ### 충돌 처리
 - 블록마다 `version` 관리
-- `version` 불일치 시 REST `409` 응답 + `CONFLICT` 이벤트 브로드캐스트
-- 클라이언트는 Optimistic Update 후 `CONFLICT` 수신 시 서버 상태로 롤백
+- `version` 불일치 시 REST `409 VERSION_CONFLICT` 응답(body에 `currentBlock` 포함) + `CONFLICT` 이벤트 브로드캐스트
+- 클라이언트는 Optimistic Update 후 `409` 또는 `CONFLICT` 수신 시 `currentBlock`(서버 상태)으로 롤백
 
 ---
 
-## 10. 에러 코드
+## 9. 에러 코드
 
 | HTTP | code | 상황 |
 |------|------|------|
@@ -601,6 +630,5 @@ Presence 발행:   /app/trip.{tripId}.presence
 | 409 | `CONFLICT` | 리소스 중복 (예: 이메일 중복 가입) |
 | 409 | `VERSION_CONFLICT` | 블록 version 불일치 |
 | 423 | `ALREADY_LOCKED` | 다른 사용자가 블록 잠금 중 |
-| 400 | `INVALID_RESET_TOKEN` | 비밀번호 재설정 코드 불일치 또는 만료 |
-| 403 | `SOCIAL_ACCOUNT` | 소셜 로그인 계정은 비밀번호 변경 불가 |
+| 400 | `INVALID_RESET_TOKEN` | 비밀번호 재설정 코드 불일치 또는 만료 (미가입·소셜 계정 포함) |
 | 500 | `INTERNAL_ERROR` | 서버 오류 |

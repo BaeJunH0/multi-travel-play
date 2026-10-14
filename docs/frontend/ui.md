@@ -14,8 +14,10 @@ App
 │   │       └── BlockTypeBadge
 │   ├── BlockModal
 │   │   └── BlockTypeBadge
-│   └── AiModal
-│       └── BlockTypeBadge
+│   ├── AiModal
+│   │   └── BlockTypeBadge
+│   ├── MemberModal
+│   └── BudgetModal
 └── InvitePage
 ```
 
@@ -26,8 +28,9 @@ App
 ### LoginPage (`/login`)
 
 **상태:**
-- `tab: 'social' | 'email'` — 소셜 / 이메일 탭 전환
-- `loading: boolean` — 로그인 요청 중 버튼 비활성화
+- `tab: 'social' | 'email' | 'signup' | 'reset'` — 소셜 / 이메일 로그인 / 회원가입 / 비밀번호 재설정 탭 전환
+- `loading`, `signupLoading`, `resetRequestLoading`, `resetConfirmLoading` — 요청 중 버튼 비활성화
+- `resetStep: 1 | 2` — 비밀번호 재설정 단계 (코드 요청 → 코드 확인 + 새 비밀번호)
 
 **Props:**
 ```typescript
@@ -37,8 +40,10 @@ interface Props {
 ```
 
 **구성:**
-- 소셜 탭: 카카오 버튼 → `window.location.href = '/api/auth/oauth2/kakao'`
-- 이메일 탭: email/password input, Eye 토글, 로그인 버튼
+- 소셜 탭: 카카오 버튼 → `/api/auth/oauth2/kakao`, 구글 버튼 → `/api/auth/oauth2/google` (`window.location.href`)
+- 이메일 탭: email/password input, Eye 토글, 로그인 버튼, 비밀번호 찾기 / 회원가입 / 소셜 로그인 링크
+- 회원가입 탭: 이메일, 비밀번호(8자 미만이면 경고), 비밀번호 확인(불일치 경고), 닉네임
+- 재설정 탭: 1단계 이메일 입력 → 2단계 숫자 인증코드 + 새 비밀번호 + 확인
 - 탭 전환은 라우팅 없이 `useState`로 처리
 
 ---
@@ -48,9 +53,11 @@ interface Props {
 **상태:**
 - `trips: Trip[]` — 여행 목록
 - `loading: boolean` — 초기 로딩
+- `createModalOpen` + `newTitle / newDestination / newStartDate / newEndDate` — 새 여행 만들기 모달
 
 **구성:**
-- 헤더: 로고 + 로그아웃 버튼
+- 헤더: 로고 + "새 여행 만들기" 버튼 + 로그아웃 버튼
+- 새 여행 모달: 생성 성공 시 바로 에디터(`/trips/:newTripId`)로 이동
 - 그리드: `grid-cols-1 sm:grid-cols-2 lg:grid-cols-3`으로 반응형 배치
 - TripCard: 여행 제목, 목적지, 날짜/박수, 인원수, 역할 뱃지
 
@@ -69,20 +76,23 @@ interface Props {
 **상태:**
 - `trip: TripDetail | null` — 여행 정보 + days
 - `presence: Presence[]` — 실시간 접속자
-- `blockModalOpen / aiModalOpen: boolean` — 모달 열림 상태
+- `activeDay: number | null` — 마지막으로 누른 Day 컬럼 (Presence에 실어 보냄)
+- `blockModalOpen / aiModalOpen / memberModalOpen / budgetModalOpen: boolean` — 모달 열림 상태
 - `editingBlock: Block | null` — 편집 중인 블록 (null이면 추가 모드)
 - `draggedBlockId: string | null` — 드래그 중인 블록 ID
 - `dragTargetInfo: { blockId, pos } | null` — 드롭 대상 위치
 
 **핵심 훅:**
 - `useTripBlocks(tripId, [])` — 블록 상태 + CRUD + WS 메시지 처리
-- `useWebSocket(...)` — STOMP 연결 + PRESENCE 분기 처리
+- `useWebSocket({ tripId, activeDay, onMessage })` — STOMP 연결 + Presence 발행. `onMessage`에서 `PRESENCE`는 `setPresence`, 나머지는 `handleWsMessage`로 분기
 
 **TopBar 구성:**
 - `←` 뒤로 가기 (여행 목록으로)
 - 여행 제목
 - `N명 편집 중` + 초록 점 (presence.length > 0 일 때)
 - AvatarStack (접속자 아바타)
+- 멤버 버튼 (MemberModal)
+- 예산 버튼 (BudgetModal)
 - 공유 버튼 (초대 링크 클립보드 복사) — VIEWER 숨김
 - AI 생성 버튼 — VIEWER 숨김
 
@@ -163,14 +173,15 @@ interface Props {
 | 상태 | 스타일 |
 |---|---|
 | 기본 | blockType 배경색 + 좌측 3px 컬러 보더 |
-| 잠금 (`lockedBy != null`) | 핑크 테두리 `#D4537E 1.5px`, "OO 편집 중" 뱃지 |
+| 타인 잠금 (`lockedBy != null && lockedBy != 내 id`) | 핑크 테두리 `#D4537E 1.5px`, "OO 편집 중" 핑크 뱃지 |
+| 내 잠금 (`lockedBy == 내 id`) | "내가 편집 중" 보라 뱃지 (테두리 없음, 편집 가능) |
 | 드래그 중 (`isDragging`) | `opacity: 0.35` |
 | 드롭 타겟 (above) | 카드 위에 `h-0.5 bg-violet-500` 라인 |
 | 드롭 타겟 (below) | 카드 아래에 `h-0.5 bg-violet-500` 라인 |
 
 **표시 필드:**
 - BlockTypeBadge
-- 잠금 뱃지 (잠금 상태일 때)
+- 잠금 뱃지 (타인 잠금 / 내 잠금일 때)
 - 장소명 (`font-semibold truncate`)
 - 시작 시간 (Clock 아이콘)
 - 소요 시간 (Timer 아이콘, 단위: 분)
@@ -178,7 +189,7 @@ interface Props {
 - 메모 (`text-xs text-gray-400 truncate`)
 - 삭제 버튼 (Trash2 아이콘, editable일 때만)
 
-**editable 조건:** `!isViewer && !locked`  
+**editable 조건:** `!isViewer && !locked` (`locked`는 타인 잠금만 뜻함 — `lockedBy !== null && lockedBy !== auth.getUser()?.id`)  
 editable이 false이면 클릭(편집), 드래그, 삭제 버튼이 모두 비활성화됩니다.
 
 ---
@@ -233,7 +244,7 @@ interface Props {
 
 **단계별 구성:**
 
-**Step 1 — 옵션 설정**
+**Step 1 — 옵션 설정** (적용 Day 선택 UI는 없고 `targetDays`에 모든 Day를 보낸다)
 
 | 필드 | 컨트롤 | 기본값 |
 |---|---|---|
@@ -252,11 +263,45 @@ interface Props {
 - 전체 선택 / 전체 해제 버튼
 - "선택된 N개" 카운트
 - "← 다시 설정" → Step 1로 복귀
-- "에디터에 추가하기" → `POST /ai/apply` → Step 3
+- "에디터에 추가하기" → `POST /ai/apply` (선택 블록 내용 전체 + `dayNumber` + `position`) → Step 3
 
 **Step 3 — 완료**
 - "N개 블록이 추가됐어요" 메시지
 - "확인" 클릭 → 모달 닫기
+
+---
+
+### MemberModal
+
+```typescript
+interface Props {
+  open: boolean
+  tripId: string
+  myRole: TripRole
+  onClose: () => void
+}
+```
+
+- 멤버 목록 표시 (`GET /members`)
+- OWNER만 다른 멤버의 역할을 드롭다운으로 변경(`PATCH /members/:userId`)하거나 내보낼 수 있음(`DELETE /members/:userId`)
+- 배경 클릭 또는 Escape 키로 닫기
+
+---
+
+### BudgetModal
+
+```typescript
+interface Props {
+  open: boolean
+  tripId: string
+  onClose: () => void
+}
+```
+
+- 카테고리 7종: 숙박(HOTEL) / 식비(FOOD) / 카페(CAFE) / 장소(PLACE) / 교통(TRANSPORT) / 항공(FLIGHT) / 기타(ETC)
+- 상단에 합계 금액, 항목별 추가 · 수정 · 삭제
+- 블록 비용으로 자동 생성된 항목(`blockId` 있음)도 같은 목록에 표시된다 (별도 구분 표시는 없음)
+- 배경 클릭 또는 Escape 키로 닫기
 
 ---
 
