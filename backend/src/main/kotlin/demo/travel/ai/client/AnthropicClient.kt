@@ -4,10 +4,13 @@ import com.fasterxml.jackson.annotation.JsonProperty
 import demo.travel.ai.client.properties.AnthropicProperties
 import demo.travel.ai.presentation.dto.AiBlock
 import demo.travel.common.exception.BusinessException
+import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.http.client.JdkClientHttpRequestFactory
 import org.springframework.stereotype.Component
+import org.springframework.web.client.ResourceAccessException
 import org.springframework.web.client.RestClient
+import org.springframework.web.client.RestClientResponseException
 import tools.jackson.core.JacksonException
 import tools.jackson.databind.ObjectMapper
 import tools.jackson.module.kotlin.readValue
@@ -19,6 +22,8 @@ class AnthropicClient(
     private val props: AnthropicProperties,
     private val objectMapper: ObjectMapper,
 ) {
+    private val log = LoggerFactory.getLogger(AnthropicClient::class.java)
+
     private val restClient = RestClient.builder()
         .baseUrl("https://api.anthropic.com")
         .defaultHeader("x-api-key", props.apiKey)
@@ -26,7 +31,7 @@ class AnthropicClient(
         .requestFactory(
             JdkClientHttpRequestFactory(
                 HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build()
-            ).apply { setReadTimeout(Duration.ofSeconds(30)) }
+            ).apply { setReadTimeout(READ_TIMEOUT) }
         )
         .build()
 
@@ -40,14 +45,41 @@ class AnthropicClient(
             ),
         )
 
-        val responseBody = restClient.post()
-            .uri("/v1/messages")
-            .body(body)
-            .retrieve()
-            .body(String::class.java)!!
+        val responseBody = try {
+            restClient.post()
+                .uri("/v1/messages")
+                .body(body)
+                .retrieve()
+                .body(String::class.java)!!
+        } catch (e: RestClientResponseException) {
+            throw toAiException(e)
+        } catch (e: ResourceAccessException) {
+            throw toAiException(e)
+        }
 
         return parse(responseBody)
     }
+
+    /**
+     * Anthropic 호출 실패를 표준 에러로 바꾼다.
+     * 429·5xx(529 overloaded 포함)·timeout·연결 실패는 다시 시도하면 되므로 503, 그 외 4xx는 키·모델·요청 문제라 502.
+     */
+    internal fun toAiException(e: Exception): BusinessException {
+        if (e is RestClientResponseException) {
+            val status = e.statusCode.value()
+            if (status == 429 || status >= 500) {
+                log.warn("Anthropic API 일시 오류: status={}, body={}", status, e.responseBodyAsString)
+                return unavailable()
+            }
+            log.error("Anthropic API 요청 실패: status={}, body={}", status, e.responseBodyAsString)
+            return BusinessException("AI_REQUEST_FAILED", "AI 일정 생성 요청에 실패했습니다. 관리자에게 문의해 주세요.", HttpStatus.BAD_GATEWAY)
+        }
+        log.warn("Anthropic API 연결 실패 또는 시간 초과", e)
+        return unavailable()
+    }
+
+    private fun unavailable() =
+        BusinessException("AI_UNAVAILABLE", "AI 서비스가 일시적으로 응답하지 않습니다. 잠시 후 다시 시도해 주세요.", HttpStatus.SERVICE_UNAVAILABLE)
 
     /**
      * Messages API 응답 본문에서 일정 블록을 꺼낸다.
@@ -109,7 +141,9 @@ class AnthropicClient(
     )
 
     companion object {
-        private const val MAX_TOKENS = 4096
+        // adaptive thinking이 출력과 한도를 나눠 쓰므로 넉넉하게 둔다 (비스트리밍 권장값)
+        private const val MAX_TOKENS = 16000
+        private val READ_TIMEOUT: Duration = Duration.ofSeconds(120)
 
         private val SYSTEM_PROMPT = """
             당신은 여행 일정 전문가입니다.

@@ -35,6 +35,10 @@
 }
 ```
 
+## 요청 설정
+- 모델 `claude-sonnet-5`, `max_tokens` 16000 (adaptive thinking이 출력과 한도를 나눠 씀), read timeout 120초, 비스트리밍
+- 호출 실패: 429·5xx·529·시간 초과·연결 실패는 `503 AI_UNAVAILABLE`, 그 외 4xx는 `502 AI_REQUEST_FAILED` (Anthropic 에러 본문은 서버 로그). 자동 재시도 없음
+
 ## 응답 파싱 처리
 1. `stop_reason`이 `end_turn`인지 확인 — 아니면(예: `max_tokens`로 잘림) 실패
 2. `content`에서 `type`이 `text`인 첫 블록을 고름 (adaptive thinking이 켜져 있으면 `thinking` 블록이 먼저 올 수 있음)
