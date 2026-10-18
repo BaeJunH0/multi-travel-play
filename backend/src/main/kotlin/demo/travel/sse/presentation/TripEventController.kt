@@ -1,6 +1,8 @@
-package demo.travel.sse
+package demo.travel.sse.presentation
 
 import demo.travel.auth.resolver.CurrentUser
+import demo.travel.sse.application.TripEventService
+import demo.travel.sse.presentation.dto.PresenceRequest
 import demo.travel.user.User
 import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.*
@@ -10,11 +12,11 @@ import java.util.*
 @RestController
 @RequestMapping("/api/trips/{tripId}")
 class TripEventController(
-    private val tripEventStream: TripEventStream,
+    private val tripEventService: TripEventService,
 ) {
     @GetMapping("/events")
     fun events(@CurrentUser user: User, @PathVariable tripId: UUID): SseEmitter =
-        tripEventStream.connect(tripId, user)
+        tripEventService.connect(tripId, user)
 
     @PostMapping("/presence")
     @ResponseStatus(HttpStatus.NO_CONTENT)
@@ -22,9 +24,5 @@ class TripEventController(
         @CurrentUser user: User,
         @PathVariable tripId: UUID,
         @RequestBody request: PresenceRequest,
-    ) = tripEventStream.updatePresence(tripId, user.id, request.activeDay)
+    ) = tripEventService.updatePresence(tripId, user.id, request.activeDay)
 }
-
-data class PresenceRequest(
-    val activeDay: Int?,
-)

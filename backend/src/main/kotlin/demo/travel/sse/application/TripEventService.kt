@@ -1,6 +1,8 @@
-package demo.travel.sse
+package demo.travel.sse.application
 
 import demo.travel.block.application.BlockService
+import demo.travel.sse.application.dto.PresenceUser
+import demo.travel.sse.application.dto.TripEvent
 import demo.travel.trip.TripMemberRepository
 import demo.travel.user.User
 import org.springframework.http.HttpStatus
@@ -12,7 +14,7 @@ import java.util.*
 
 /** SSE 연결 수명 관리: 연결 시 presence 등록, 주기적 heartbeat, 끊기면 presence 제거와 잠금 해제. */
 @Service
-class TripEventStream(
+class TripEventService(
     private val connections: TripConnectionRegistry,
     private val presenceStore: PresenceStore,
     private val eventPublisher: TripEventPublisher,

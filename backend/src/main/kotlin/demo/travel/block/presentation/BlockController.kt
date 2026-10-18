@@ -2,13 +2,13 @@ package demo.travel.block.presentation
 
 import demo.travel.auth.resolver.CurrentUser
 import demo.travel.block.application.BlockService
+import demo.travel.block.application.VersionConflictException
 import demo.travel.block.application.dto.BlockCommand
 import demo.travel.block.presentation.dto.BlockRequest
 import demo.travel.block.presentation.dto.BlockResponse
-import demo.travel.common.exception.VersionConflictException
+import demo.travel.sse.application.TripEventPublisher
+import demo.travel.sse.application.dto.TripEvent
 import demo.travel.user.User
-import demo.travel.sse.TripEvent
-import demo.travel.sse.TripEventPublisher
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.*
@@ -30,21 +30,21 @@ class BlockController(
         @CurrentUser user: User,
         @PathVariable tripId: UUID,
         @Valid @RequestBody request: BlockRequest.Create,
-    ): BlockResponse = BlockResponse.of(
-        blockService.addBlock(
-            BlockCommand.Create(
-                tripId = tripId,
-                dayNumber = request.dayNumber,
-                blockType = request.blockType,
-                placeName = request.placeName,
-                startTime = request.startTime,
-                durationMin = request.durationMin,
-                cost = request.cost,
-                memo = request.memo,
-                userId = user.id,
-            )
+    ): BlockResponse = blockService.addBlock(
+        BlockCommand.Create(
+            tripId = tripId,
+            dayNumber = request.dayNumber,
+            blockType = request.blockType,
+            placeName = request.placeName,
+            startTime = request.startTime,
+            durationMin = request.durationMin,
+            cost = request.cost,
+            memo = request.memo,
+            userId = user.id,
         )
-    ).also { eventPublisher.publish(tripId, TripEvent.add(tripId, it)) }
+    )
+        .also { eventPublisher.publish(tripId, TripEvent.add(tripId, it)) }
+        .let { BlockResponse.of(it) }
 
     @PatchMapping("/{blockId}")
     fun updateBlock(
@@ -52,23 +52,23 @@ class BlockController(
         @PathVariable tripId: UUID,
         @PathVariable blockId: UUID,
         @Valid @RequestBody request: BlockRequest.Update,
-    ): BlockResponse = BlockResponse.of(
-        broadcastingConflict(tripId) {
-            blockService.updateBlock(
-                BlockCommand.Update(
-                    tripId = tripId,
-                    blockId = blockId,
-                    placeName = request.placeName,
-                    startTime = request.startTime,
-                    durationMin = request.durationMin,
-                    cost = request.cost,
-                    memo = request.memo,
-                    version = request.version,
-                    userId = user.id,
-                )
+    ): BlockResponse = broadcastingConflict(tripId) {
+        blockService.updateBlock(
+            BlockCommand.Update(
+                tripId = tripId,
+                blockId = blockId,
+                placeName = request.placeName,
+                startTime = request.startTime,
+                durationMin = request.durationMin,
+                cost = request.cost,
+                memo = request.memo,
+                version = request.version,
+                userId = user.id,
             )
-        }
-    ).also { eventPublisher.publish(tripId, TripEvent.update(tripId, it)) }
+        )
+    }
+        .also { eventPublisher.publish(tripId, TripEvent.update(tripId, it)) }
+        .let { BlockResponse.of(it) }
 
     @PatchMapping("/{blockId}/move")
     fun moveBlock(
@@ -76,20 +76,20 @@ class BlockController(
         @PathVariable tripId: UUID,
         @PathVariable blockId: UUID,
         @Valid @RequestBody request: BlockRequest.Move,
-    ): BlockResponse = BlockResponse.of(
-        broadcastingConflict(tripId) {
-            blockService.moveBlock(
-                BlockCommand.Move(
-                    tripId = tripId,
-                    blockId = blockId,
-                    dayNumber = request.dayNumber,
-                    position = request.position,
-                    version = request.version,
-                    userId = user.id,
-                )
+    ): BlockResponse = broadcastingConflict(tripId) {
+        blockService.moveBlock(
+            BlockCommand.Move(
+                tripId = tripId,
+                blockId = blockId,
+                dayNumber = request.dayNumber,
+                position = request.position,
+                version = request.version,
+                userId = user.id,
             )
-        }
-    ).also { eventPublisher.publish(tripId, TripEvent.move(tripId, it)) }
+        )
+    }
+        .also { eventPublisher.publish(tripId, TripEvent.move(tripId, it)) }
+        .let { BlockResponse.of(it) }
 
     @DeleteMapping("/{blockId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
@@ -108,8 +108,9 @@ class BlockController(
         @CurrentUser user: User,
         @PathVariable tripId: UUID,
         @PathVariable blockId: UUID,
-    ): BlockResponse = BlockResponse.of(blockService.lockBlock(tripId, blockId, user.id))
+    ): BlockResponse = blockService.lockBlock(tripId, blockId, user.id)
         .also { eventPublisher.publish(tripId, TripEvent.lock(tripId, it)) }
+        .let { BlockResponse.of(it) }
 
     @DeleteMapping("/{blockId}/lock")
     @ResponseStatus(HttpStatus.NO_CONTENT)
@@ -132,7 +133,7 @@ class BlockController(
         try {
             block()
         } catch (e: VersionConflictException) {
-            eventPublisher.publish(tripId, TripEvent.conflict(tripId, BlockResponse.of(e.currentBlock)))
+            eventPublisher.publish(tripId, TripEvent.conflict(tripId, e.currentBlock))
             throw e
         }
 }

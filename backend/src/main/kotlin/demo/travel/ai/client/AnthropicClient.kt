@@ -1,8 +1,7 @@
 package demo.travel.ai.client
 
 import com.fasterxml.jackson.annotation.JsonProperty
-import demo.travel.ai.client.properties.AnthropicProperties
-import demo.travel.ai.presentation.dto.AiBlock
+import demo.travel.ai.client.dto.AiBlock
 import demo.travel.common.exception.BusinessException
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus

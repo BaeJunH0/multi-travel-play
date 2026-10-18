@@ -1,6 +1,15 @@
 package demo.travel.sse
 
 import demo.travel.block.application.BlockService
+import demo.travel.sse.application.PresenceStore
+import demo.travel.sse.application.TripConnection
+import demo.travel.sse.application.TripConnectionRegistry
+import demo.travel.sse.application.TripEventPublisher
+import demo.travel.sse.application.TripEventService
+import demo.travel.sse.application.dto.BlockIdPayload
+import demo.travel.sse.application.dto.PresencePayload
+import demo.travel.sse.application.dto.PresenceUser
+import demo.travel.sse.application.dto.TripEvent
 import demo.travel.trip.Trip
 import demo.travel.trip.TripMember
 import demo.travel.trip.TripMemberRepository
@@ -19,14 +28,14 @@ import java.io.IOException
 import java.time.LocalDate
 import java.util.*
 
-class TripEventStreamTest : BehaviorSpec({
+class TripEventServiceTest : BehaviorSpec({
 
     val eventPublisher = mockk<TripEventPublisher>(relaxed = true)
     val blockService = mockk<BlockService>()
     val tripMemberRepository = mockk<TripMemberRepository>()
     lateinit var connections: TripConnectionRegistry
     lateinit var presenceStore: PresenceStore
-    lateinit var stream: TripEventStream
+    lateinit var service: TripEventService
 
     val user = User(email = "user@test.com", nickname = "유저", provider = AuthProvider.LOCAL)
     val trip = Trip(
@@ -37,10 +46,10 @@ class TripEventStreamTest : BehaviorSpec({
     val blockId = UUID.randomUUID()
 
     fun isPresenceWith(event: TripEvent, users: List<PresenceUser>) =
-        event.action == TripEvent.Action.PRESENCE && event.payload == mapOf("users" to users)
+        event.action == TripEvent.Action.PRESENCE && event.payload == PresencePayload(users)
 
     fun isUnlockOf(event: TripEvent, id: UUID) =
-        event.action == TripEvent.Action.UNLOCK && event.payload == mapOf("blockId" to id)
+        event.action == TripEvent.Action.UNLOCK && event.payload == BlockIdPayload(id)
 
     fun deadEmitter() = mockk<SseEmitter>(relaxed = true) {
         every { send(any<SseEmitter.SseEventBuilder>()) } throws IOException("broken pipe")
@@ -50,7 +59,7 @@ class TripEventStreamTest : BehaviorSpec({
         clearAllMocks()
         connections = TripConnectionRegistry()
         presenceStore = PresenceStore()
-        stream = TripEventStream(connections, presenceStore, eventPublisher, blockService, tripMemberRepository)
+        service = TripEventService(connections, presenceStore, eventPublisher, blockService, tripMemberRepository)
         every { blockService.releaseLocks(any(), any()) } returns emptyList()
         every { blockService.refreshLocks(any()) } returns emptyList()
     }
@@ -61,7 +70,7 @@ class TripEventStreamTest : BehaviorSpec({
                 every { tripMemberRepository.findByTripIdAndUserId(tripId, user.id) } returns
                     TripMember(trip = trip, user = user, role = TripRole.VIEWER)
 
-                stream.connect(tripId, user)
+                service.connect(tripId, user)
 
                 connections.of(tripId).single().userId shouldBe user.id
                 val expected = PresenceUser(user.id, "유저", PresenceUser.avatarColorOf(user.id), null)
@@ -74,7 +83,7 @@ class TripEventStreamTest : BehaviorSpec({
             then("403을 던지고 연결을 등록하지 않는다") {
                 every { tripMemberRepository.findByTripIdAndUserId(tripId, user.id) } returns null
 
-                val ex = shouldThrow<ResponseStatusException> { stream.connect(tripId, user) }
+                val ex = shouldThrow<ResponseStatusException> { service.connect(tripId, user) }
                 ex.statusCode shouldBe HttpStatus.FORBIDDEN
                 connections.all().shouldBeEmpty()
                 presenceStore.getUsers(tripId).shouldBeEmpty()
@@ -87,7 +96,7 @@ class TripEventStreamTest : BehaviorSpec({
             then("activeDay를 바꾸고 PRESENCE를 브로드캐스트한다") {
                 presenceStore.join(tripId, PresenceUser.of(user))
 
-                stream.updatePresence(tripId, user.id, 2)
+                service.updatePresence(tripId, user.id, 2)
 
                 presenceStore.getUsers(tripId).single().activeDay shouldBe 2
                 verify(exactly = 1) { eventPublisher.publish(tripId, match { it.action == TripEvent.Action.PRESENCE }) }
@@ -96,7 +105,7 @@ class TripEventStreamTest : BehaviorSpec({
 
         `when`("접속 중이 아닌 유저일 때") {
             then("아무것도 발행하지 않는다") {
-                stream.updatePresence(tripId, user.id, 2)
+                service.updatePresence(tripId, user.id, 2)
 
                 verify(exactly = 0) { eventPublisher.publish(any(), any()) }
             }
@@ -111,7 +120,7 @@ class TripEventStreamTest : BehaviorSpec({
                 presenceStore.join(tripId, PresenceUser.of(user))
                 every { blockService.releaseLocks(tripId, user.id) } returns listOf(blockId)
 
-                stream.disconnect(connection)
+                service.disconnect(connection)
 
                 presenceStore.getUsers(tripId).shouldBeEmpty()
                 verify(exactly = 1) { eventPublisher.publish(tripId, match { isPresenceWith(it, emptyList()) }) }
@@ -126,7 +135,7 @@ class TripEventStreamTest : BehaviorSpec({
                 connections.add(TripConnection(tripId, user.id))
                 presenceStore.join(tripId, PresenceUser.of(user))
 
-                stream.disconnect(tab1)
+                service.disconnect(tab1)
 
                 presenceStore.getUsers(tripId).single().userId shouldBe user.id
                 verify(exactly = 0) { blockService.releaseLocks(any(), any()) }
@@ -139,8 +148,8 @@ class TripEventStreamTest : BehaviorSpec({
                 val connection = TripConnection(tripId, user.id)
                 connections.add(connection)
 
-                stream.disconnect(connection)
-                stream.disconnect(connection)
+                service.disconnect(connection)
+                service.disconnect(connection)
 
                 verify(exactly = 1) { blockService.releaseLocks(tripId, user.id) }
             }
@@ -155,7 +164,7 @@ class TripEventStreamTest : BehaviorSpec({
                 connections.add(TripConnection(tripId, otherId))
                 every { blockService.releaseLocks(tripId, user.id) } returns listOf(blockId)
 
-                stream.heartbeat()
+                service.heartbeat()
 
                 connections.of(tripId).single().userId shouldBe otherId
                 verify(exactly = 1) { eventPublisher.publish(tripId, match { isUnlockOf(it, blockId) }) }
@@ -168,7 +177,7 @@ class TripEventStreamTest : BehaviorSpec({
                 val expiredBlockId = UUID.randomUUID()
                 every { blockService.refreshLocks(emptySet()) } returns listOf(tripId to expiredBlockId)
 
-                stream.heartbeat()
+                service.heartbeat()
 
                 verify(exactly = 1) { eventPublisher.publish(tripId, match { isUnlockOf(it, expiredBlockId) }) }
             }

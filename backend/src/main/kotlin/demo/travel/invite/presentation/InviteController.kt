@@ -28,6 +28,6 @@ class InviteController(
 
     @PostMapping("/api/invite/{shareToken}/accept")
     @ResponseStatus(HttpStatus.CREATED)
-    fun accept(@CurrentUser user: User, @PathVariable shareToken: String) =
-        mapOf("tripId" to inviteService.accept(shareToken, user))
+    fun accept(@CurrentUser user: User, @PathVariable shareToken: String): InviteResponse.Accept =
+        InviteResponse.Accept(tripId = inviteService.accept(shareToken, user))
 }

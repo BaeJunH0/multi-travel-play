@@ -1,8 +1,8 @@
 # DTO 배치 컨벤션
 
 계층 분리(`presentation` / `application`, 외부 API 연동이 있는 도메인은 `client` 포함)를 적용한 도메인에서 DTO를
-어느 패키지에 두고 어떻게 부를지 정하는 기준. `ai`, `auth`, `block`, `budget`, `invite`, `member`, `trip` 도메인
-모두 이 컨벤션을 따른다.
+어느 패키지에 두고 어떻게 부를지 정하는 기준. `ai`, `auth`, `block`, `budget`, `invite`, `member`, `sse`, `trip` 도메인
+모두 이 컨벤션을 따르며, 아래 규칙은 [아키텍처 테스트](#아키텍처-테스트로-강제하는-규칙)가 검사한다.
 
 ---
 
@@ -90,3 +90,53 @@ object AuthCommand {
 ```
 
 DTO가 하나뿐이면 굳이 `object`로 감싸지 않고 top-level `data class`로 둔다 (`TokenResponse`, `UserResponse`, `TokenPair`).
+
+---
+
+## 아키텍처 테스트로 강제하는 규칙
+
+`backend/src/test/kotlin/demo/travel/architecture/ArchitectureTest.kt`(ArchUnit)가 아래 규칙을 검사한다.
+`./gradlew test`에 포함되므로 규칙을 어기면 빌드가 실패한다. 규칙을 바꿀 때는 이 문서와 테스트를 함께 고친다.
+
+### 계층 의존 방향
+
+| 규칙 | 이유 |
+|------|------|
+| `application` → `presentation` 참조 금지 | 서비스는 `Command`/`Query`를 받고 `Result`를 돌려준다 |
+| `client` → `application`·`presentation` 참조 금지 | client는 외부 API 응답을 `client/dto`로만 돌려준다 |
+| `presentation` → `client` 참조 금지 | 외부 연동은 서비스를 거친다 (예: OAuth 인가 URL도 `AuthService`가 만든다) |
+| `presentation` → 리포지토리 참조 금지 | 조회도 서비스를 거친다 (`@CurrentUser` 리졸버는 `auth/resolver`라 예외) |
+| 엔티티·리포지토리 → `application`·`presentation`·`client` 참조 금지 | 도메인 루트는 가장 아래 계층이다 |
+| `common` → 다른 도메인 참조 금지 | 도메인 전용 예외 응답은 그 도메인의 `presentation`에 `@RestControllerAdvice`로 둔다 (예: `BlockExceptionHandler`) |
+
+다른 도메인의 같은 계층이나 아래 계층은 참조해도 된다. 예: `BlockController`(presentation) → `sse.application.TripEventPublisher`,
+`AiResponse`(presentation) → `BlockResponse`(presentation).
+
+### 클래스 위치와 이름
+
+| 대상 | 위치 | 이름 |
+|------|------|------|
+| `@RestController` | `{domain}.presentation` | `*Controller` |
+| `@RestControllerAdvice` | `{domain}.presentation` 또는 `common.exception` | — |
+| `@Service` | `{domain}.application` | `*Service` |
+| top-level `*Request` / `*Response` | `{domain}.presentation.dto` (공통 에러 응답 `ErrorResponse`만 `common.exception`) | — |
+| top-level `*Command` / `*Query` / `*Result` | `{domain}.application.dto` | — |
+| `@Entity` | 도메인 루트 `demo.travel.{domain}` | — |
+| 리포지토리 | 도메인 루트 `demo.travel.{domain}` | `*Repository` |
+| `@ConfigurationProperties` | 그 설정을 쓰는 `{domain}.client` 또는 앱 전역이면 `config` | `*Properties` |
+
+`@Component`(스토어, 레지스트리, 리스너, 퍼블리셔 등)는 이름 규칙 없이 `application`에 둔다.
+
+### 기타
+
+- 설정값은 `@Value` 대신 `@ConfigurationProperties` 클래스로 주입한다.
+- 서비스의 public 메서드는 엔티티를 반환하지 않는다. `Result`로 변환해서 넘긴다.
+- 컨트롤러 메서드는 `Map`을 반환하지 않는다. 필드가 하나뿐이어도 `Response` DTO로 응답한다 (예: `InviteResponse.Accept`).
+
+### 검사하지 않는 것
+
+아래는 아직 도메인마다 방식이 달라 테스트로 강제하지 않는다.
+
+- 권한 검사 헬퍼(`requireEditorOrAbove` 등)가 서비스마다 따로 있다.
+- 서비스 파라미터로 `userId: UUID` 대신 `User` 엔티티를 받는 곳이 있다 (`InviteService.accept`, `TripEventService.connect`).
+- 단일 primitive가 아닌 삭제 입력을 `Command`로 감쌀지(`BudgetCommand.Delete`) 풀어서 받을지(`BlockService.deleteBlock`)가 섞여 있다.

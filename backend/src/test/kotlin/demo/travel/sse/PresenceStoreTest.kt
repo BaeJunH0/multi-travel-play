@@ -1,5 +1,7 @@
 package demo.travel.sse
 
+import demo.travel.sse.application.PresenceStore
+import demo.travel.sse.application.dto.PresenceUser
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.shouldBe

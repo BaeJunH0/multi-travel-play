@@ -1,7 +1,6 @@
 package demo.travel.ai.client
 
 import org.slf4j.LoggerFactory
-import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.client.JdkClientHttpRequestFactory
 import org.springframework.stereotype.Component
 import org.springframework.web.client.RestClient
@@ -10,7 +9,7 @@ import java.time.Duration
 
 @Component
 class GooglePlacesClient(
-    @Value("\${google.places.api-key}") private val apiKey: String,
+    private val props: GooglePlacesProperties,
 ) {
     private val log = LoggerFactory.getLogger(GooglePlacesClient::class.java)
 
@@ -30,7 +29,7 @@ class GooglePlacesClient(
                     .queryParam("input", placeName)
                     .queryParam("inputtype", "textquery")
                     .queryParam("fields", "geometry")
-                    .queryParam("key", apiKey)
+                    .queryParam("key", props.apiKey)
                     .build()
             }
             .retrieve()

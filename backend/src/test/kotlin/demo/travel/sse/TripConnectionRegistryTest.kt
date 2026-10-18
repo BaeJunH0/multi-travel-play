@@ -1,5 +1,7 @@
 package demo.travel.sse
 
+import demo.travel.sse.application.TripConnection
+import demo.travel.sse.application.TripConnectionRegistry
 import io.kotest.core.spec.style.BehaviorSpec
 import io.kotest.matchers.shouldBe
 import io.mockk.every

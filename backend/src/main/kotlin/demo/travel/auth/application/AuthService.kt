@@ -52,6 +52,10 @@ class AuthService(
         return issueTokenPair(user.id)
     }
 
+    fun kakaoAuthorizationUrl(): String = kakaoOAuthClient.authorizationUrl()
+
+    fun googleAuthorizationUrl(): String = googleOAuthClient.authorizationUrl()
+
     fun kakaoLogin(code: String): TokenPair {
         val accessToken = kakaoOAuthClient.fetchAccessToken(code)
         val userInfo = kakaoOAuthClient.fetchUserInfo(accessToken)

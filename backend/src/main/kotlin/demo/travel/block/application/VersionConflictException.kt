@@ -1,4 +1,4 @@
-package demo.travel.common.exception
+package demo.travel.block.application
 
 import demo.travel.block.application.dto.BlockResult
 
