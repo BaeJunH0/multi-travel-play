@@ -1,20 +1,18 @@
 package demo.travel.auth.application
 
+import demo.travel.config.JwtProperties
 import io.jsonwebtoken.JwtException
 import io.jsonwebtoken.Jwts
 import io.jsonwebtoken.security.Keys
-import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
 import java.util.Date
 import java.util.UUID
 
 @Component
-class JwtProvider(
-    @Value("\${jwt.secret}") secret: String,
-    @Value("\${jwt.access-token-expiry}") private val accessTokenExpiry: Long,
-    @Value("\${jwt.refresh-token-expiry}") private val refreshTokenExpiry: Long,
-) {
-    private val key = Keys.hmacShaKeyFor(secret.toByteArray())
+class JwtProvider(props: JwtProperties) {
+    private val key = Keys.hmacShaKeyFor(props.secret.toByteArray())
+    private val accessTokenExpiry = props.accessTokenExpiry
+    private val refreshTokenExpiry = props.refreshTokenExpiry
 
     fun generate(userId: UUID): String = Jwts.builder()
         .subject(userId.toString())

@@ -1,4 +1,4 @@
-package demo.travel.sse
+package demo.travel.sse.application
 
 import org.springframework.stereotype.Component
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter

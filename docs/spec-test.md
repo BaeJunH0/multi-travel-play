@@ -24,6 +24,7 @@ testImplementation("io.kotest:kotest-runner-junit5:5.9.1")
 testImplementation("io.kotest:kotest-assertions-core:5.9.1")
 testImplementation("io.kotest.extensions:kotest-extensions-spring:1.3.0")
 testImplementation("io.mockk:mockk:1.13.12")
+testImplementation("com.tngtech.archunit:archunit:1.3.0")
 testRuntimeOnly("com.h2database:h2")
 ```
 
@@ -33,6 +34,7 @@ testRuntimeOnly("com.h2database:h2")
 | `kotest-assertions-core` | `shouldBe`, `shouldThrow`, `shouldHaveSize` 등 단언문 |
 | `kotest-extensions-spring` | `@DataJpaTest`와 Kotest BehaviorSpec 연동 |
 | `mockk` | Kotlin 친화적 Mock 라이브러리 |
+| `archunit` | 패키지 · 계층 구조 규칙 검사 (`architecture/ArchitectureTest.kt`) |
 | `h2` | Repository 테스트용 in-memory DB |
 
 ---
@@ -184,7 +186,7 @@ spring:
 | `block/BlockControllerTest.kt` | `BlockController` 충돌 브로드캐스트 | 3 |
 | `sse/PresenceStoreTest.kt` | `PresenceStore`, `PresenceUser.avatarColorOf` | 5 |
 | `sse/TripConnectionRegistryTest.kt` | `TripConnectionRegistry`, `TripConnection.send` | 6 |
-| `sse/TripEventStreamTest.kt` | `TripEventStream` (연결 · presence · 연결 종료 시 잠금 해제 · heartbeat) | 9 |
+| `sse/TripEventServiceTest.kt` | `TripEventService` (연결 · presence · 연결 종료 시 잠금 해제 · heartbeat) | 9 |
 | `invite/InviteServiceTest.kt` | `InviteService` | 9 |
 | `member/MemberServiceTest.kt` | `MemberService` | 13 |
 
@@ -205,7 +207,8 @@ spring:
 | `user/UserTest.kt` | `User.changePassword()` | 3 |
 | `trip/TripResultTest.kt` | `TripResult.Detail.of()` | 3 |
 | `block/BlockResultTest.kt` | `BlockResult.of()` | 5 |
-| `common/ExceptionTest.kt` | `BusinessException`, `VersionConflictException` | 5 |
+| `common/ExceptionTest.kt` | `BusinessException` | 3 |
+| `block/VersionConflictExceptionTest.kt` | `VersionConflictException`, `BlockExceptionHandler` (409 응답 형태) | 3 |
 | `common/GlobalExceptionHandlerTest.kt` | `GlobalExceptionHandler.handleMessageNotReadable` | 1 |
 | `budget/BlockBudgetSyncListenerTest.kt` | `BlockBudgetSyncListener` | 4 |
 
@@ -216,6 +219,7 @@ spring:
 | `block/BlockLockConcurrencyTest.kt` | heartbeat 잠금 연장 · 해제와 동시 요청이 겹칠 때 | `@SpringBootTest` + `TransactionTemplate`(REQUIRES_NEW)로 두 트랜잭션을 끼워 넣음 |
 | `sse/TripEventControllerTest.kt` | `GET /api/trips/{tripId}/events` 인증 · 권한 · 첫 `PRESENCE` | `@SpringBootTest(RANDOM_PORT)` + 실제 HTTP 요청 |
 | `config/WebConfigCorsTest.kt` | `WebConfig`의 REST `/api/**` CORS | `@SpringBootTest(RANDOM_PORT)` + 실제 preflight 요청 |
+| `architecture/ArchitectureTest.kt` | 패키지 · 계층 의존 · 클래스 위치/이름 규칙 (`convention-dto.md`) | ArchUnit + `BehaviorSpec` (Spring 컨텍스트 없음) |
 | `TravelApplicationTests.kt` | 애플리케이션 컨텍스트 로딩 (`contextLoads`) | `@SpringBootTest` + JUnit `@Test` |
 
 ---
@@ -377,7 +381,7 @@ spring:
 | of | 여러 trip 연결이 섞여 있음 | 해당 trip 연결만 반환 |
 | TripConnection.send | 전송 실패 | `completeWithError`, false |
 
-### 6-3-6. TripEventStream
+### 6-3-6. TripEventService
 
 | given | when | then |
 |-------|------|------|
@@ -519,6 +523,7 @@ spring:
 | BusinessException | 404 NOT_FOUND | status = NOT_FOUND |
 | VersionConflictException | currentBlock 전달 | 메시지 고정, currentBlock 포함 |
 | VersionConflictException | 타입 확인 | RuntimeException 상속 |
+| BlockExceptionHandler | VersionConflictException 처리 | 409 + `code=VERSION_CONFLICT`, `message`, `currentBlock` |
 
 ### 6-15. GlobalExceptionHandlerTest
 
@@ -577,7 +582,7 @@ spring:
 Mockito는 Kotlin의 `final class` (data class 포함)를 기본 Mock할 수 없어 별도 설정이 필요하다. MockK는 Kotlin 친화적으로 설계되어 data class, object, extension function, companion object를 추가 설정 없이 Mock한다.
 
 ### `VersionConflictException` 타입 검증
-`ResponseStatusException`이 아닌 `VersionConflictException`을 직접 `shouldThrow`로 잡아 `currentBlock` 필드를 검증한다. 이 예외는 `GlobalExceptionHandler`에서 409로 변환되며, 응답 body에 `currentBlock`을 포함하는 것이 핵심 계약이기 때문이다.
+`ResponseStatusException`이 아닌 `VersionConflictException`을 직접 `shouldThrow`로 잡아 `currentBlock` 필드를 검증한다. 이 예외는 `block/presentation/BlockExceptionHandler`에서 409로 변환되며, 응답 body에 `currentBlock`을 포함하는 것이 핵심 계약이기 때문이다.
 
 ### 423 상태 코드 검증 방식
 `HttpStatus` enum에 423(`LOCKED`)이 존재하지만, 서비스 코드가 `HttpStatus.valueOf(423)`로 생성하므로 테스트에서도 `.statusCode.value() shouldBe 423`으로 숫자 값을 직접 비교한다.

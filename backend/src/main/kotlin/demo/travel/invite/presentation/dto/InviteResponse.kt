@@ -38,4 +38,6 @@ object InviteResponse {
             )
         }
     }
+
+    data class Accept(val tripId: UUID)
 }

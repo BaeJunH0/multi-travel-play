@@ -7,7 +7,6 @@ import demo.travel.block.application.dto.BlockResult
 import demo.travel.block.event.BlockDeletedEvent
 import demo.travel.block.event.toCostChangedEventOrNull
 import demo.travel.common.TripCategory
-import demo.travel.common.exception.VersionConflictException
 import demo.travel.trip.TripMemberRepository
 import demo.travel.trip.TripRole
 import demo.travel.user.UserRepository

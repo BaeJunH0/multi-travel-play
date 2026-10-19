@@ -3,10 +3,8 @@ package demo.travel.auth.presentation
 import demo.travel.auth.application.AuthService
 import demo.travel.auth.application.dto.AuthCommand
 import demo.travel.auth.application.dto.PasswordResetCommand
-import demo.travel.auth.resolver.CurrentUser
-import demo.travel.auth.client.GoogleOAuthClient
-import demo.travel.auth.client.KakaoOAuthClient
 import demo.travel.auth.application.PasswordResetService
+import demo.travel.auth.resolver.CurrentUser
 import demo.travel.auth.presentation.dto.AuthRequest
 import demo.travel.auth.presentation.dto.PasswordResetRequest
 import demo.travel.auth.presentation.dto.TokenResponse
@@ -32,8 +30,6 @@ import java.net.URI
 @RequestMapping("/api/auth")
 class AuthController(
     private val authService: AuthService,
-    private val kakaoOAuthClient: KakaoOAuthClient,
-    private val googleOAuthClient: GoogleOAuthClient,
     private val passwordResetService: PasswordResetService,
 ) {
     @PostMapping("/signup")
@@ -83,7 +79,7 @@ class AuthController(
     fun googleRedirect(): ResponseEntity<Void> =
         ResponseEntity
             .status(HttpStatus.FOUND)
-            .location(URI.create(googleOAuthClient.authorizationUrl()))
+            .location(URI.create(authService.googleAuthorizationUrl()))
             .build()
 
     @GetMapping("/oauth2/google/callback")
@@ -102,7 +98,7 @@ class AuthController(
     fun kakaoRedirect(): ResponseEntity<Void> =
         ResponseEntity
             .status(HttpStatus.FOUND)
-            .location(URI.create(kakaoOAuthClient.authorizationUrl()))
+            .location(URI.create(authService.kakaoAuthorizationUrl()))
             .build()
 
     @GetMapping("/oauth2/kakao/callback")

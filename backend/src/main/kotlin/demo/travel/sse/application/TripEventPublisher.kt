@@ -1,5 +1,6 @@
-package demo.travel.sse
+package demo.travel.sse.application
 
+import demo.travel.sse.application.dto.TripEvent
 import org.springframework.stereotype.Component
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter
 import java.util.*

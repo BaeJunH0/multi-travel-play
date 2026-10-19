@@ -5,12 +5,12 @@ import demo.travel.block.application.dto.BlockResult
 import demo.travel.block.presentation.BlockController
 import demo.travel.block.presentation.dto.BlockRequest
 import demo.travel.common.TripCategory
-import demo.travel.common.exception.VersionConflictException
+import demo.travel.block.application.VersionConflictException
 import demo.travel.user.AuthProvider
 import demo.travel.user.User
-import demo.travel.sse.ConflictPayload
-import demo.travel.sse.TripEvent
-import demo.travel.sse.TripEventPublisher
+import demo.travel.sse.application.dto.ConflictPayload
+import demo.travel.sse.application.dto.TripEvent
+import demo.travel.sse.application.TripEventPublisher
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.BehaviorSpec
 import io.mockk.*

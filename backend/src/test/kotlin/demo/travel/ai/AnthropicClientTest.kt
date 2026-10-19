@@ -1,7 +1,7 @@
 package demo.travel.ai
 
 import demo.travel.ai.client.AnthropicClient
-import demo.travel.ai.client.properties.AnthropicProperties
+import demo.travel.ai.client.AnthropicProperties
 import demo.travel.common.TripCategory
 import demo.travel.common.exception.BusinessException
 import io.kotest.assertions.throwables.shouldThrow

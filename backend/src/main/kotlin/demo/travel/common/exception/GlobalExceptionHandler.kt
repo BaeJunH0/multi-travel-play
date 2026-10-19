@@ -24,11 +24,6 @@ class GlobalExceptionHandler {
     fun handleBusiness(e: BusinessException): ResponseEntity<ErrorResponse> =
         ResponseEntity.status(e.status)
             .body(ErrorResponse(e.code, e.message))
-
-    @ExceptionHandler(VersionConflictException::class)
-    fun handleVersionConflict(e: VersionConflictException) =
-        ResponseEntity.status(HttpStatus.CONFLICT)
-            .body(mapOf("code" to "VERSION_CONFLICT", "message" to e.message, "currentBlock" to e.currentBlock))
 }
 
 data class ErrorResponse(val code: String, val message: String?)

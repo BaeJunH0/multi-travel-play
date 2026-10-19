@@ -1,0 +1,21 @@
+package demo.travel.ai.client.dto
+
+import demo.travel.common.TripCategory
+
+/**
+ * AI가 제안한 일정 블록 1건. 아직 DB에 저장되지 않은 "제안" 상태이며,
+ * 사용자가 `apply`로 선택하기 전까지는 [tempId] 기준으로만 식별된다.
+ *
+ * @param tempId AI 응답 내에서만 유효한 임시 식별자 (형식: `temp-{n}`). DB PK가 아님.
+ * @param suggestedDay AI가 제안한 Day. 사용자가 `apply` 시 다른 Day를 지정하면 무시된다.
+ */
+data class AiBlock(
+    val tempId: String,
+    val blockType: TripCategory,
+    val placeName: String,
+    val startTime: String?,
+    val durationMin: Int?,
+    val cost: Int?,
+    val suggestedDay: Int,
+    val memo: String?,
+)
