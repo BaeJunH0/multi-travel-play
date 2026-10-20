@@ -72,7 +72,7 @@ class AiService(
                     cost = selected.cost,
                     memo = selected.memo,
                     createdBy = creator,
-                )
+                ),
             )
             saved.toCostChangedEventOrNull()?.let { eventPublisher.publishEvent(it) }
             AiResult.AppliedBlock(tempId = selected.tempId, block = BlockResult.of(saved))
@@ -87,13 +87,7 @@ class AiService(
         if (member.role == TripRole.VIEWER) throw ResponseStatusException(HttpStatus.FORBIDDEN)
     }
 
-    private fun buildPrompt(
-        destination: String,
-        startDate: String,
-        endDate: String,
-        totalDays: Int,
-        command: AiCommand.Generate,
-    ) = """
+    private fun buildPrompt(destination: String, startDate: String, endDate: String, totalDays: Int, command: AiCommand.Generate) = """
         목적지: $destination
         기간: $startDate ~ $endDate (${totalDays}일)
         생성 항목: ${command.tags.takeIf { it.isNotEmpty() }?.joinToString(", ") ?: "전체"}

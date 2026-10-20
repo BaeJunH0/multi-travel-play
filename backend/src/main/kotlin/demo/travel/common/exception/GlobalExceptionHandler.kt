@@ -11,9 +11,8 @@ import org.springframework.web.server.ResponseStatusException
 class GlobalExceptionHandler {
 
     @ExceptionHandler(ResponseStatusException::class)
-    fun handleResponseStatus(e: ResponseStatusException): ResponseEntity<ErrorResponse> =
-        ResponseEntity.status(e.statusCode)
-            .body(ErrorResponse(e.statusCode.value().toErrorCode(), e.reason ?: e.message))
+    fun handleResponseStatus(e: ResponseStatusException): ResponseEntity<ErrorResponse> = ResponseEntity.status(e.statusCode)
+        .body(ErrorResponse(e.statusCode.value().toErrorCode(), e.reason ?: e.message))
 
     @ExceptionHandler(HttpMessageNotReadableException::class)
     fun handleMessageNotReadable(e: HttpMessageNotReadableException): ResponseEntity<ErrorResponse> =
@@ -21,9 +20,8 @@ class GlobalExceptionHandler {
             .body(ErrorResponse("INVALID_REQUEST", "요청 본문이 올바르지 않습니다."))
 
     @ExceptionHandler(BusinessException::class)
-    fun handleBusiness(e: BusinessException): ResponseEntity<ErrorResponse> =
-        ResponseEntity.status(e.status)
-            .body(ErrorResponse(e.code, e.message))
+    fun handleBusiness(e: BusinessException): ResponseEntity<ErrorResponse> = ResponseEntity.status(e.status)
+        .body(ErrorResponse(e.code, e.message))
 }
 
 data class ErrorResponse(val code: String, val message: String?)

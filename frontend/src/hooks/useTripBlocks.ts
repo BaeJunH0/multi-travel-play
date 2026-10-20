@@ -4,13 +4,16 @@ import { isAxiosError } from 'axios'
 import { blockApi } from '../services/blockApi'
 import type { Block, BlockType, TripEvent } from '../types'
 
+// 블록 API 오류 응답 본문 (409 VERSION_CONFLICT면 currentBlock이 온다)
+type BlockErrorBody = { code?: string; currentBlock?: Block }
+
 export function useTripBlocks(tripId: string, initial: Block[]) {
   const [blocks, setBlocks] = useState<Block[]>(initial)
 
   // SSE 이벤트 처리
   const handleTripEvent = useCallback((msg: TripEvent) => {
-    const p = msg.payload as any
-    switch (msg.action) {
+    const { action, payload: p } = msg
+    switch (action) {
       case 'ADD':
         setBlocks((prev) => prev.some((b) => b.id === p.id) ? prev : [...prev, p])
         break
@@ -63,8 +66,8 @@ export function useTripBlocks(tripId: string, initial: Block[]) {
     try {
       const { data: updated } = await blockApi.updateBlock(tripId, blockId, { ...patch, version: prev.version })
       setBlocks((cur) => cur.map((b) => b.id === blockId ? updated : b))
-    } catch (err: any) {
-      if (err.response?.data?.code === 'VERSION_CONFLICT') {
+    } catch (err) {
+      if (isAxiosError<BlockErrorBody>(err) && err.response?.data?.code === 'VERSION_CONFLICT') {
         const latest: Block = err.response.data.currentBlock ?? prev
         setBlocks((cur) => cur.map((b) => b.id === blockId ? latest : b))
         toast.error('다른 사용자가 수정했습니다. 최신 내용으로 되돌렸어요.')
@@ -89,12 +92,12 @@ export function useTripBlocks(tripId: string, initial: Block[]) {
       const minGap = dayBlocks.reduce((min, b, i) =>
         i === 0 ? min : Math.min(min, b.position - dayBlocks[i - 1].position), Infinity)
       if (minGap < 1e-4) await blockApi.reorder(tripId)
-    } catch (err: any) {
-      if (err.response?.data?.code === 'VERSION_CONFLICT') {
+    } catch (err) {
+      if (isAxiosError<BlockErrorBody>(err) && err.response?.data?.code === 'VERSION_CONFLICT') {
         const latest: Block = err.response.data.currentBlock ?? prev
         setBlocks((cur) => cur.map((b) => b.id === blockId ? latest : b))
         toast.error('다른 사용자가 수정했습니다.')
-      } else if (err.response?.status === 423) {
+      } else if (isAxiosError(err) && err.response?.status === 423) {
         setBlocks((cur) => cur.map((b) => b.id === blockId ? prev : b))
         toast.error(lockedMessage(prev.lockedByNickname))
       } else {

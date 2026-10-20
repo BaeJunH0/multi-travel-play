@@ -8,17 +8,15 @@ import java.net.http.HttpClient
 import java.time.Duration
 
 @Component
-class GooglePlacesClient(
-    private val props: GooglePlacesProperties,
-) {
+class GooglePlacesClient(private val props: GooglePlacesProperties) {
     private val log = LoggerFactory.getLogger(GooglePlacesClient::class.java)
 
     private val restClient = RestClient.builder()
         .baseUrl("https://maps.googleapis.com")
         .requestFactory(
             JdkClientHttpRequestFactory(
-                HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build()
-            ).apply { setReadTimeout(Duration.ofSeconds(10)) }
+                HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build(),
+            ).apply { setReadTimeout(Duration.ofSeconds(10)) },
         )
         .build()
 
@@ -37,7 +35,7 @@ class GooglePlacesClient(
 
         response?.candidates?.firstOrNull()?.geometry?.location?.let { it.lat to it.lng }
     }.onFailure { log.warn("Google Places 조회 실패: placeName={}", placeName, it) }
-     .getOrNull()
+        .getOrNull()
 
     private data class PlacesResponse(val candidates: List<Candidate>)
     private data class Candidate(val geometry: Geometry?)

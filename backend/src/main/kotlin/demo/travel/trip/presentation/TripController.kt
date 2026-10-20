@@ -8,7 +8,15 @@ import demo.travel.trip.presentation.dto.TripResponse
 import demo.travel.user.User
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
-import org.springframework.web.bind.annotation.*
+import org.springframework.web.bind.annotation.DeleteMapping
+import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.PatchMapping
+import org.springframework.web.bind.annotation.PathVariable
+import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.RequestBody
+import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.ResponseStatus
+import org.springframework.web.bind.annotation.RestController
 import java.util.*
 
 @RestController
@@ -16,48 +24,42 @@ import java.util.*
 class TripController(private val tripService: TripService) {
 
     @GetMapping
-    fun getList(@CurrentUser user: User): List<TripResponse.Summary> =
-        tripService.getList(user.id).map { TripResponse.Summary.of(it) }
+    fun getList(@CurrentUser user: User): List<TripResponse.Summary> = tripService.getList(user.id).map { TripResponse.Summary.of(it) }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    fun create(@CurrentUser user: User, @Valid @RequestBody request: TripRequest.Create): TripResponse.Detail =
-        TripResponse.Detail.of(
-            tripService.create(
-                TripCommand.Create(
-                    title = request.title,
-                    destination = request.destination,
-                    startDate = request.startDate,
-                    endDate = request.endDate,
-                    userId = user.id,
-                )
-            )
-        )
+    fun create(@CurrentUser user: User, @Valid @RequestBody request: TripRequest.Create): TripResponse.Detail = TripResponse.Detail.of(
+        tripService.create(
+            TripCommand.Create(
+                title = request.title,
+                destination = request.destination,
+                startDate = request.startDate,
+                endDate = request.endDate,
+                userId = user.id,
+            ),
+        ),
+    )
 
     @GetMapping("/{tripId}")
     fun getDetail(@CurrentUser user: User, @PathVariable tripId: UUID): TripResponse.Detail =
         TripResponse.Detail.of(tripService.getDetail(tripId, user.id))
 
     @PatchMapping("/{tripId}")
-    fun update(
-        @CurrentUser user: User,
-        @PathVariable tripId: UUID,
-        @RequestBody request: TripRequest.Update,
-    ): TripResponse.Detail = TripResponse.Detail.of(
-        tripService.update(
-            TripCommand.Update(
-                tripId = tripId,
-                title = request.title,
-                destination = request.destination,
-                startDate = request.startDate,
-                endDate = request.endDate,
-                userId = user.id,
-            )
+    fun update(@CurrentUser user: User, @PathVariable tripId: UUID, @RequestBody request: TripRequest.Update): TripResponse.Detail =
+        TripResponse.Detail.of(
+            tripService.update(
+                TripCommand.Update(
+                    tripId = tripId,
+                    title = request.title,
+                    destination = request.destination,
+                    startDate = request.startDate,
+                    endDate = request.endDate,
+                    userId = user.id,
+                ),
+            ),
         )
-    )
 
     @DeleteMapping("/{tripId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    fun delete(@CurrentUser user: User, @PathVariable tripId: UUID) =
-        tripService.delete(tripId, user.id)
+    fun delete(@CurrentUser user: User, @PathVariable tripId: UUID) = tripService.delete(tripId, user.id)
 }

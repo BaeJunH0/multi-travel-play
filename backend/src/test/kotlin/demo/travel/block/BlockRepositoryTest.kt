@@ -23,7 +23,9 @@ class BlockRepositoryTest : BehaviorSpec() {
     override fun extensions() = listOf(SpringExtension)
 
     @Autowired lateinit var userRepository: UserRepository
+
     @Autowired lateinit var tripRepository: TripRepository
+
     @Autowired lateinit var blockRepository: BlockRepository
 
     private fun savedUser(suffix: String) =
@@ -31,18 +33,24 @@ class BlockRepositoryTest : BehaviorSpec() {
 
     private fun savedTrip(owner: User) = tripRepository.save(
         Trip(
-            owner = owner, title = "여행", destination = "서울",
-            startDate = LocalDate.of(2026, 8, 1), endDate = LocalDate.of(2026, 8, 3),
-        )
+            owner = owner,
+            title = "여행",
+            destination = "서울",
+            startDate = LocalDate.of(2026, 8, 1),
+            endDate = LocalDate.of(2026, 8, 3),
+        ),
     )
 
-    private fun savedBlock(trip: Trip, creator: User, dayNumber: Int, position: Double) =
-        blockRepository.save(
-            ScheduleBlock(
-                trip = trip, dayNumber = dayNumber, position = position,
-                blockType = TripCategory.PLACE, placeName = "장소", createdBy = creator,
-            )
-        )
+    private fun savedBlock(trip: Trip, creator: User, dayNumber: Int, position: Double) = blockRepository.save(
+        ScheduleBlock(
+            trip = trip,
+            dayNumber = dayNumber,
+            position = position,
+            blockType = TripCategory.PLACE,
+            placeName = "장소",
+            createdBy = creator,
+        ),
+    )
 
     init {
         given("findAllByTripIdOrderByDayNumberAscPositionAsc") {
@@ -82,9 +90,12 @@ class BlockRepositoryTest : BehaviorSpec() {
                     val trip1 = savedTrip(user)
                     val trip2 = tripRepository.save(
                         Trip(
-                            owner = user, title = "다른 여행", destination = "부산",
-                            startDate = LocalDate.of(2026, 9, 1), endDate = LocalDate.of(2026, 9, 2),
-                        )
+                            owner = user,
+                            title = "다른 여행",
+                            destination = "부산",
+                            startDate = LocalDate.of(2026, 9, 1),
+                            endDate = LocalDate.of(2026, 9, 2),
+                        ),
                     )
                     savedBlock(trip1, user, dayNumber = 1, position = 1.0)
                     savedBlock(trip2, user, dayNumber = 1, position = 1.0)

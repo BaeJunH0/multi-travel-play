@@ -4,10 +4,7 @@ import java.time.LocalDate
 import java.util.UUID
 
 object InviteResult {
-    data class Link(
-        val shareToken: String,
-        val inviteUrl: String,
-    )
+    data class Link(val shareToken: String, val inviteUrl: String)
 
     data class Info(
         val tripId: UUID,

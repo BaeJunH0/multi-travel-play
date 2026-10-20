@@ -12,10 +12,5 @@ object TripRequest {
         @field:NotNull val endDate: LocalDate,
     )
 
-    data class Update(
-        val title: String?,
-        val destination: String?,
-        val startDate: LocalDate?,
-        val endDate: LocalDate?,
-    )
+    data class Update(val title: String?, val destination: String?, val startDate: LocalDate?, val endDate: LocalDate?)
 }

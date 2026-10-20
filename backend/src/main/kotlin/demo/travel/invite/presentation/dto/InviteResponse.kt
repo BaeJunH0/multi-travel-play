@@ -5,10 +5,7 @@ import java.time.LocalDate
 import java.util.UUID
 
 object InviteResponse {
-    data class Link(
-        val shareToken: String,
-        val inviteUrl: String,
-    ) {
+    data class Link(val shareToken: String, val inviteUrl: String) {
         companion object {
             fun of(result: InviteResult.Link) = Link(
                 shareToken = result.shareToken,

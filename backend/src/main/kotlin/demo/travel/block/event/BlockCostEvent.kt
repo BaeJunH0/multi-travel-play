@@ -4,13 +4,7 @@ import demo.travel.block.ScheduleBlock
 import demo.travel.common.TripCategory
 import java.util.UUID
 
-data class BlockCostChangedEvent(
-    val blockId: UUID,
-    val tripId: UUID,
-    val category: TripCategory,
-    val cost: Int,
-    val placeName: String,
-)
+data class BlockCostChangedEvent(val blockId: UUID, val tripId: UUID, val category: TripCategory, val cost: Int, val placeName: String)
 
 data class BlockDeletedEvent(val blockId: UUID)
 

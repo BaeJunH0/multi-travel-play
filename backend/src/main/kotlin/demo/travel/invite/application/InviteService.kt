@@ -14,10 +14,7 @@ import java.util.UUID
 
 @Service
 @Transactional
-class InviteService(
-    private val tripRepository: TripRepository,
-    private val tripMemberRepository: TripMemberRepository,
-) {
+class InviteService(private val tripRepository: TripRepository, private val tripMemberRepository: TripMemberRepository) {
     fun createInviteLink(tripId: UUID, userId: UUID, baseUrl: String): InviteResult.Link {
         val member = tripMemberRepository.findByTripIdAndUserId(tripId, userId)
             ?: throw ResponseStatusException(HttpStatus.FORBIDDEN)

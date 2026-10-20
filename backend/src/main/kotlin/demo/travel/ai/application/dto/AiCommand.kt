@@ -18,11 +18,7 @@ object AiCommand {
         val userId: UUID,
     )
 
-    data class Apply(
-        val tripId: UUID,
-        val selectedBlocks: List<SelectedBlock>,
-        val userId: UUID,
-    )
+    data class Apply(val tripId: UUID, val selectedBlocks: List<SelectedBlock>, val userId: UUID)
 
     /** 사용자가 채택한 AI 블록 1건과 사용자가 정한 배치(dayNumber, position). */
     data class SelectedBlock(

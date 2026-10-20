@@ -18,20 +18,24 @@ class TripRepositoryTest : BehaviorSpec() {
     override fun extensions() = listOf(SpringExtension)
 
     @Autowired lateinit var userRepository: UserRepository
+
     @Autowired lateinit var tripRepository: TripRepository
+
     @Autowired lateinit var tripMemberRepository: TripMemberRepository
 
     private fun savedUser(suffix: String) =
         userRepository.save(User(email = "tr-$suffix@test.com", nickname = "유저$suffix", provider = AuthProvider.LOCAL))
 
-    private fun savedTrip(owner: User, shareToken: String? = null) =
-        tripRepository.save(
-            Trip(
-                owner = owner, title = "여행", destination = "서울",
-                startDate = LocalDate.of(2026, 8, 1), endDate = LocalDate.of(2026, 8, 3),
-                shareToken = shareToken,
-            )
-        )
+    private fun savedTrip(owner: User, shareToken: String? = null) = tripRepository.save(
+        Trip(
+            owner = owner,
+            title = "여행",
+            destination = "서울",
+            startDate = LocalDate.of(2026, 8, 1),
+            endDate = LocalDate.of(2026, 8, 3),
+            shareToken = shareToken,
+        ),
+    )
 
     init {
         given("TripRepository.findByShareToken") {
@@ -150,9 +154,12 @@ class TripRepositoryTest : BehaviorSpec() {
                     val trip1 = savedTrip(user)
                     val trip2 = tripRepository.save(
                         Trip(
-                            owner = user, title = "두 번째 여행", destination = "부산",
-                            startDate = LocalDate.of(2026, 9, 1), endDate = LocalDate.of(2026, 9, 3),
-                        )
+                            owner = user,
+                            title = "두 번째 여행",
+                            destination = "부산",
+                            startDate = LocalDate.of(2026, 9, 1),
+                            endDate = LocalDate.of(2026, 9, 3),
+                        ),
                     )
                     tripMemberRepository.save(TripMember(trip = trip1, user = user, role = TripRole.OWNER))
                     tripMemberRepository.save(TripMember(trip = trip2, user = user, role = TripRole.EDITOR))

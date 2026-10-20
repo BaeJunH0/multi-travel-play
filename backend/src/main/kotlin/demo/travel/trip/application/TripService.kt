@@ -31,17 +31,15 @@ class TripService(
                 destination = command.destination,
                 startDate = command.startDate,
                 endDate = command.endDate,
-            )
+            ),
         )
         tripMemberRepository.save(TripMember(trip = trip, user = owner, role = TripRole.OWNER))
         return TripResult.Detail.of(trip, TripRole.OWNER, 1)
     }
 
     @Transactional(readOnly = true)
-    fun getList(userId: UUID): List<TripResult.Summary> {
-        return tripMemberRepository.findAllWithTripByUserId(userId).map { member ->
-            TripResult.Summary.of(member, tripMemberRepository.countByTripId(member.trip.id))
-        }
+    fun getList(userId: UUID): List<TripResult.Summary> = tripMemberRepository.findAllWithTripByUserId(userId).map { member ->
+        TripResult.Summary.of(member, tripMemberRepository.countByTripId(member.trip.id))
     }
 
     @Transactional(readOnly = true)
@@ -70,12 +68,10 @@ class TripService(
         tripRepository.deleteById(tripId)
     }
 
-    private fun findTripOrThrow(tripId: UUID) =
-        tripRepository.findByIdOrNull(tripId) ?: throw ResponseStatusException(HttpStatus.NOT_FOUND)
+    private fun findTripOrThrow(tripId: UUID) = tripRepository.findByIdOrNull(tripId) ?: throw ResponseStatusException(HttpStatus.NOT_FOUND)
 
-    private fun findMemberOrThrow(tripId: UUID, userId: UUID) =
-        tripMemberRepository.findByTripIdAndUserId(tripId, userId)
-            ?: throw ResponseStatusException(HttpStatus.FORBIDDEN)
+    private fun findMemberOrThrow(tripId: UUID, userId: UUID) = tripMemberRepository.findByTripIdAndUserId(tripId, userId)
+        ?: throw ResponseStatusException(HttpStatus.FORBIDDEN)
 
     private fun requireEditorOrAbove(member: TripMember) {
         if (member.role == TripRole.VIEWER) throw ResponseStatusException(HttpStatus.FORBIDDEN)

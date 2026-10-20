@@ -2,7 +2,15 @@ package demo.travel.budget
 
 import demo.travel.common.TripCategory
 import demo.travel.trip.Trip
-import jakarta.persistence.*
+import jakarta.persistence.Column
+import jakarta.persistence.Entity
+import jakarta.persistence.EnumType
+import jakarta.persistence.Enumerated
+import jakarta.persistence.FetchType
+import jakarta.persistence.Id
+import jakarta.persistence.JoinColumn
+import jakarta.persistence.ManyToOne
+import jakarta.persistence.Table
 import java.util.UUID
 
 @Entity

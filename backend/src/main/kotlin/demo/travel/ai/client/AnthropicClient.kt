@@ -17,10 +17,7 @@ import java.net.http.HttpClient
 import java.time.Duration
 
 @Component
-class AnthropicClient(
-    private val props: AnthropicProperties,
-    private val objectMapper: ObjectMapper,
-) {
+class AnthropicClient(private val props: AnthropicProperties, private val objectMapper: ObjectMapper) {
     private val log = LoggerFactory.getLogger(AnthropicClient::class.java)
 
     private val restClient = RestClient.builder()
@@ -29,8 +26,8 @@ class AnthropicClient(
         .defaultHeader("anthropic-version", "2023-06-01")
         .requestFactory(
             JdkClientHttpRequestFactory(
-                HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build()
-            ).apply { setReadTimeout(READ_TIMEOUT) }
+                HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build(),
+            ).apply { setReadTimeout(READ_TIMEOUT) },
         )
         .build()
 
@@ -118,13 +115,9 @@ class AnthropicClient(
         }
     }
 
-    private fun invalidResponse(message: String) =
-        BusinessException("AI_RESPONSE_INVALID", message, HttpStatus.BAD_GATEWAY)
+    private fun invalidResponse(message: String) = BusinessException("AI_RESPONSE_INVALID", message, HttpStatus.BAD_GATEWAY)
 
-    private data class MessagesResponse(
-        val content: List<ContentBlock>,
-        @JsonProperty("stop_reason") val stopReason: String?,
-    )
+    private data class MessagesResponse(val content: List<ContentBlock>, @JsonProperty("stop_reason") val stopReason: String?)
     private data class ContentBlock(val type: String, val text: String?)
 
     private data class BlocksPayload(val blocks: List<RawBlock>)

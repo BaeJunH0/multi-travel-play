@@ -1,0 +1,19 @@
+root = true
+
+[*]
+charset = utf-8
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+# Markdown은 줄 끝 공백 두 칸이 줄바꿈이라 지우지 않는다
+[*.md]
+trim_trailing_whitespace = false
+
+[*.{kt,kts}]
+indent_style = space
+indent_size = 4
+max_line_length = 140
+ktlint_code_style = intellij_idea
+# IntelliJ가 import를 * 로 합치지 않게 한다 (ktlint no-wildcard-imports와 맞춤)
+ij_kotlin_name_count_to_use_star_import = 2147483647
+ij_kotlin_name_count_to_use_star_import_for_members = 2147483647

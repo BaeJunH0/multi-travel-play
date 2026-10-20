@@ -23,9 +23,7 @@ object AiRequest {
      * 서버는 별도로 원본 상태를 들고 있지 않으므로(stateless), 저장할 블록의 내용을
      * [SelectedBlock]에 그대로 담아 보낸다.
      */
-    data class Apply(
-        val selectedBlocks: List<SelectedBlock>,
-    )
+    data class Apply(val selectedBlocks: List<SelectedBlock>)
 
     /**
      * 사용자가 채택한 AI 블록 1건. [AiResponse.SuggestedBlock]의 내용과 사용자가 정한 배치 정보를

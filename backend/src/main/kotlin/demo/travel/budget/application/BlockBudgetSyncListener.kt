@@ -12,10 +12,7 @@ import org.springframework.transaction.event.TransactionPhase
 import org.springframework.transaction.event.TransactionalEventListener
 
 @Component
-class BlockBudgetSyncListener(
-    private val budgetRepository: BudgetRepository,
-    private val tripRepository: TripRepository,
-) {
+class BlockBudgetSyncListener(private val budgetRepository: BudgetRepository, private val tripRepository: TripRepository) {
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     fun onCostChanged(event: BlockCostChangedEvent) {
@@ -32,7 +29,7 @@ class BlockBudgetSyncListener(
                     category = event.category,
                     amount = event.cost,
                     memo = event.placeName,
-                )
+                ),
             )
         }
     }

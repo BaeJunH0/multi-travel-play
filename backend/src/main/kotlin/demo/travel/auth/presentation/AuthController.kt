@@ -1,14 +1,14 @@
 package demo.travel.auth.presentation
 
 import demo.travel.auth.application.AuthService
+import demo.travel.auth.application.PasswordResetService
 import demo.travel.auth.application.dto.AuthCommand
 import demo.travel.auth.application.dto.PasswordResetCommand
-import demo.travel.auth.application.PasswordResetService
-import demo.travel.auth.resolver.CurrentUser
 import demo.travel.auth.presentation.dto.AuthRequest
 import demo.travel.auth.presentation.dto.PasswordResetRequest
 import demo.travel.auth.presentation.dto.TokenResponse
 import demo.travel.auth.presentation.dto.UserResponse
+import demo.travel.auth.resolver.CurrentUser
 import demo.travel.user.User
 import jakarta.servlet.http.Cookie
 import jakarta.servlet.http.HttpServletRequest
@@ -28,26 +28,17 @@ import java.net.URI
 
 @RestController
 @RequestMapping("/api/auth")
-class AuthController(
-    private val authService: AuthService,
-    private val passwordResetService: PasswordResetService,
-) {
+class AuthController(private val authService: AuthService, private val passwordResetService: PasswordResetService) {
     @PostMapping("/signup")
     @ResponseStatus(HttpStatus.CREATED)
-    fun signup(
-        @Valid @RequestBody request: AuthRequest.Signup,
-        response: HttpServletResponse,
-    ): TokenResponse {
+    fun signup(@Valid @RequestBody request: AuthRequest.Signup, response: HttpServletResponse): TokenResponse {
         val pair = authService.signup(AuthCommand.Signup(request.email, request.password, request.nickname))
         setRefreshCookie(response, pair.refreshToken)
         return TokenResponse(pair.accessToken)
     }
 
     @PostMapping("/login")
-    fun login(
-        @Valid @RequestBody request: AuthRequest.Login,
-        response: HttpServletResponse,
-    ): TokenResponse {
+    fun login(@Valid @RequestBody request: AuthRequest.Login, response: HttpServletResponse): TokenResponse {
         val pair = authService.login(AuthCommand.Login(request.email, request.password))
         setRefreshCookie(response, pair.refreshToken)
         return TokenResponse(pair.accessToken)
@@ -76,40 +67,42 @@ class AuthController(
     )
 
     @GetMapping("/oauth2/google")
-    fun googleRedirect(): ResponseEntity<Void> =
-        ResponseEntity
-            .status(HttpStatus.FOUND)
-            .location(URI.create(authService.googleAuthorizationUrl()))
-            .build()
+    fun googleRedirect(): ResponseEntity<Void> = ResponseEntity
+        .status(HttpStatus.FOUND)
+        .location(URI.create(authService.googleAuthorizationUrl()))
+        .build()
 
     @GetMapping("/oauth2/google/callback")
     fun googleCallback(@RequestParam code: String, response: HttpServletResponse) {
         val pair = authService.googleLogin(code)
         setRefreshCookie(response, pair.refreshToken)
-        response.addCookie(Cookie("accessToken", pair.accessToken).apply {
-            path = "/"
-            isHttpOnly = true
-            maxAge = 3600
-        })
+        response.addCookie(
+            Cookie("accessToken", pair.accessToken).apply {
+                path = "/"
+                isHttpOnly = true
+                maxAge = 3600
+            },
+        )
         response.sendRedirect("/")
     }
 
     @GetMapping("/oauth2/kakao")
-    fun kakaoRedirect(): ResponseEntity<Void> =
-        ResponseEntity
-            .status(HttpStatus.FOUND)
-            .location(URI.create(authService.kakaoAuthorizationUrl()))
-            .build()
+    fun kakaoRedirect(): ResponseEntity<Void> = ResponseEntity
+        .status(HttpStatus.FOUND)
+        .location(URI.create(authService.kakaoAuthorizationUrl()))
+        .build()
 
     @GetMapping("/oauth2/kakao/callback")
     fun kakaoCallback(@RequestParam code: String, response: HttpServletResponse) {
         val pair = authService.kakaoLogin(code)
         setRefreshCookie(response, pair.refreshToken)
-        response.addCookie(Cookie("accessToken", pair.accessToken).apply {
-            path = "/"
-            isHttpOnly = true
-            maxAge = 3600
-        })
+        response.addCookie(
+            Cookie("accessToken", pair.accessToken).apply {
+                path = "/"
+                isHttpOnly = true
+                maxAge = 3600
+            },
+        )
         response.sendRedirect("/")
     }
 
@@ -120,31 +113,32 @@ class AuthController(
     }
 
     @PostMapping("/password-reset/confirm")
-    fun confirmPasswordReset(
-        @Valid @RequestBody request: PasswordResetRequest.Confirm,
-    ): TokenResponse {
+    fun confirmPasswordReset(@Valid @RequestBody request: PasswordResetRequest.Confirm): TokenResponse {
         val accessToken = passwordResetService.confirmReset(
-            PasswordResetCommand.Confirm(request.email, request.token, request.newPassword)
+            PasswordResetCommand.Confirm(request.email, request.token, request.newPassword),
         )
         return TokenResponse(accessToken)
     }
 
     private fun setRefreshCookie(response: HttpServletResponse, token: String) {
-        response.addCookie(Cookie("refreshToken", token).apply {
-            path = "/api/auth"
-            isHttpOnly = true
-            maxAge = 60 * 60 * 24 * 7  // 7일
-        })
+        response.addCookie(
+            Cookie("refreshToken", token).apply {
+                path = "/api/auth"
+                isHttpOnly = true
+                maxAge = 60 * 60 * 24 * 7 // 7일
+            },
+        )
     }
 
     private fun expireRefreshCookie(response: HttpServletResponse) {
-        response.addCookie(Cookie("refreshToken", "").apply {
-            path = "/api/auth"
-            isHttpOnly = true
-            maxAge = 0
-        })
+        response.addCookie(
+            Cookie("refreshToken", "").apply {
+                path = "/api/auth"
+                isHttpOnly = true
+                maxAge = 0
+            },
+        )
     }
 
-    private fun getRefreshCookie(request: HttpServletRequest): String? =
-        request.cookies?.find { it.name == "refreshToken" }?.value
+    private fun getRefreshCookie(request: HttpServletRequest): String? = request.cookies?.find { it.name == "refreshToken" }?.value
 }

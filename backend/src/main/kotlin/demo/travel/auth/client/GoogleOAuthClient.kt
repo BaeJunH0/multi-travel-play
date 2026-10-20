@@ -1,12 +1,12 @@
 package demo.travel.auth.client
 
+import com.fasterxml.jackson.annotation.JsonProperty
 import demo.travel.auth.client.dto.GoogleUserInfo
 import org.springframework.http.MediaType
 import org.springframework.http.client.JdkClientHttpRequestFactory
 import org.springframework.stereotype.Component
 import org.springframework.util.LinkedMultiValueMap
 import org.springframework.web.client.RestClient
-import com.fasterxml.jackson.annotation.JsonProperty
 import java.net.http.HttpClient
 import java.time.Duration
 
@@ -23,12 +23,11 @@ class GoogleOAuthClient(private val props: GoogleProperties) {
         .requestFactory(requestFactory())
         .build()
 
-    fun authorizationUrl(): String =
-        "https://accounts.google.com/o/oauth2/v2/auth" +
-                "?client_id=${props.clientId}" +
-                "&redirect_uri=${props.redirectUri}" +
-                "&response_type=code" +
-                "&scope=openid%20email%20profile"
+    fun authorizationUrl(): String = "https://accounts.google.com/o/oauth2/v2/auth" +
+        "?client_id=${props.clientId}" +
+        "&redirect_uri=${props.redirectUri}" +
+        "&response_type=code" +
+        "&scope=openid%20email%20profile"
 
     fun fetchAccessToken(code: String): String {
         val body = LinkedMultiValueMap<String, String>().apply {
@@ -61,19 +60,13 @@ class GoogleOAuthClient(private val props: GoogleProperties) {
         )
     }
 
-    private data class GoogleTokenResponse(
-        @JsonProperty("access_token") val accessToken: String,
-    )
+    private data class GoogleTokenResponse(@JsonProperty("access_token") val accessToken: String)
 
-    private data class GoogleUserInfoResponse(
-        val sub: String,
-        val email: String?,
-        val name: String?,
-    )
+    private data class GoogleUserInfoResponse(val sub: String, val email: String?, val name: String?)
 
     companion object {
         private fun requestFactory() = JdkClientHttpRequestFactory(
-            HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build()
+            HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build(),
         ).apply { setReadTimeout(Duration.ofSeconds(10)) }
     }
 }

@@ -3,37 +3,27 @@ package demo.travel.sse.application.dto
 import demo.travel.block.application.dto.BlockResult
 import java.util.*
 
-data class TripEvent(
-    val action: Action,
-    val tripId: UUID,
-    val payload: Any,
-) {
+data class TripEvent(val action: Action, val tripId: UUID, val payload: Any) {
     enum class Action { ADD, UPDATE, MOVE, DELETE, LOCK, UNLOCK, CONFLICT, PRESENCE }
 
     companion object {
-        fun add(tripId: UUID, block: BlockResult) =
-            TripEvent(Action.ADD, tripId, block)
+        fun add(tripId: UUID, block: BlockResult) = TripEvent(Action.ADD, tripId, block)
 
-        fun update(tripId: UUID, block: BlockResult) =
-            TripEvent(Action.UPDATE, tripId, UpdatePayload(block.id, block))
+        fun update(tripId: UUID, block: BlockResult) = TripEvent(Action.UPDATE, tripId, UpdatePayload(block.id, block))
 
         fun move(tripId: UUID, block: BlockResult) =
             TripEvent(Action.MOVE, tripId, MovePayload(block.id, block.dayNumber, block.position, block.version))
 
-        fun delete(tripId: UUID, blockId: UUID) =
-            TripEvent(Action.DELETE, tripId, BlockIdPayload(blockId))
+        fun delete(tripId: UUID, blockId: UUID) = TripEvent(Action.DELETE, tripId, BlockIdPayload(blockId))
 
         fun lock(tripId: UUID, block: BlockResult) =
             TripEvent(Action.LOCK, tripId, LockPayload(block.id, block.lockedBy, block.lockedByNickname))
 
-        fun unlock(tripId: UUID, blockId: UUID) =
-            TripEvent(Action.UNLOCK, tripId, BlockIdPayload(blockId))
+        fun unlock(tripId: UUID, blockId: UUID) = TripEvent(Action.UNLOCK, tripId, BlockIdPayload(blockId))
 
-        fun conflict(tripId: UUID, block: BlockResult) =
-            TripEvent(Action.CONFLICT, tripId, ConflictPayload(block.id, block))
+        fun conflict(tripId: UUID, block: BlockResult) = TripEvent(Action.CONFLICT, tripId, ConflictPayload(block.id, block))
 
-        fun presence(tripId: UUID, users: List<PresenceUser>) =
-            TripEvent(Action.PRESENCE, tripId, PresencePayload(users))
+        fun presence(tripId: UUID, users: List<PresenceUser>) = TripEvent(Action.PRESENCE, tripId, PresencePayload(users))
     }
 }
 

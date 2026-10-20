@@ -56,7 +56,7 @@ class BlockService(
                 cost = command.cost,
                 memo = command.memo,
                 createdBy = userRepository.getReferenceById(command.userId),
-            )
+            ),
         )
         block.toCostChangedEventOrNull()?.let { eventPublisher.publishEvent(it) }
         return BlockResult.of(block)
@@ -115,10 +115,9 @@ class BlockService(
     }
 
     /** 유저가 해당 여행에서 잡고 있던 잠금을 모두 해제하고, 해제한 blockId 목록을 반환한다. (마지막 SSE 연결 종료 시) */
-    fun releaseLocks(tripId: UUID, userId: UUID): List<UUID> =
-        blockRepository.findAllByTripIdAndLockedById(tripId, userId)
-            .map { it.id }
-            .filter { blockRepository.releaseLock(it, userId) == 1 }
+    fun releaseLocks(tripId: UUID, userId: UUID): List<UUID> = blockRepository.findAllByTripIdAndLockedById(tripId, userId)
+        .map { it.id }
+        .filter { blockRepository.releaseLock(it, userId) == 1 }
 
     /**
      * heartbeat마다 호출한다. [connected]는 SSE 연결이 살아 있는 (tripId, userId) 목록.

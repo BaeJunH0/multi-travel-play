@@ -3,7 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import { ChevronLeft, Link2, Sparkles, Users, Wallet, Plus } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { isAxiosError } from 'axios'
-import type { Block, BlockType, TripDetail, Presence, AiGeneratedBlock } from '../types'
+import type { Block, BlockType, TripDetail, Presence } from '../types'
 import { BLOCK_STYLE } from '../types'
 import { tripApi } from '../services/tripApi'
 import { blockApi } from '../services/blockApi'
@@ -48,7 +48,7 @@ export default function TripEditorPage() {
       })
       .catch(() => toast.error('데이터를 불러오지 못했습니다.'))
       .finally(() => setLoading(false))
-  }, [tripId])
+  }, [tripId, setBlocks])
 
   // 실시간 이벤트 (SSE)
   useTripEvents({
@@ -56,7 +56,7 @@ export default function TripEditorPage() {
     activeDay,
     onMessage: (msg) => {
       if (msg.action === 'PRESENCE') {
-        setPresence((msg.payload as any).users)
+        setPresence(msg.payload.users)
       } else {
         handleTripEvent(msg)
       }
@@ -182,9 +182,8 @@ export default function TripEditorPage() {
   }
 
   // AI apply
-  const handleAiApply = (aiBlocks: Array<AiGeneratedBlock & { dayNumber: number }>) => {
+  const handleAiApply = (newBlocks: Block[]) => {
     // AiModal에서 apply API 호출 후 반환된 블록을 직접 setBlocks에 추가
-    const newBlocks: Block[] = aiBlocks as any
     setBlocks((prev) => [...prev, ...newBlocks])
   }
 
