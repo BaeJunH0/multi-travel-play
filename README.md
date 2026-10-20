@@ -79,6 +79,6 @@ API/DB/AI 프롬프트/테스트 문서는 [docs/](docs/) 디렉터리를, 프�
 PR과 `main` 푸시마다 GitHub Actions가 아래 검사를 돌립니다. 규칙과 위반 수정 방법은 [린트·검증 컨벤션](docs/convention-lint.md)을 참고하세요.
 
 ```bash
-cd backend && ./gradlew check                                    # ktlint + 테스트(ArchUnit 포함)
-cd frontend && npm ci && npm run lint && npm run typecheck        # eslint + 타입 검사
+(cd backend && ./gradlew check)                                  # ktlint + 테스트(ArchUnit 포함)
+(cd frontend && npm ci && npm run lint && npm run typecheck)      # eslint + 타입 검사
 ```

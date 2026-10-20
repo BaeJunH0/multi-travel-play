@@ -1,8 +1,11 @@
 import { useState, useCallback } from 'react'
 import toast from 'react-hot-toast'
-import { isAxiosError, type AxiosError } from 'axios'
+import { isAxiosError } from 'axios'
 import { blockApi } from '../services/blockApi'
 import type { Block, BlockType, TripEvent } from '../types'
+
+// 블록 API 오류 응답 본문 (409 VERSION_CONFLICT면 currentBlock이 온다)
+type BlockErrorBody = { code?: string; currentBlock?: Block }
 
 export function useTripBlocks(tripId: string, initial: Block[]) {
   const [blocks, setBlocks] = useState<Block[]>(initial)
@@ -64,7 +67,7 @@ export function useTripBlocks(tripId: string, initial: Block[]) {
       const { data: updated } = await blockApi.updateBlock(tripId, blockId, { ...patch, version: prev.version })
       setBlocks((cur) => cur.map((b) => b.id === blockId ? updated : b))
     } catch (err) {
-      if (isBlockApiError(err) && err.response?.data?.code === 'VERSION_CONFLICT') {
+      if (isAxiosError<BlockErrorBody>(err) && err.response?.data?.code === 'VERSION_CONFLICT') {
         const latest: Block = err.response.data.currentBlock ?? prev
         setBlocks((cur) => cur.map((b) => b.id === blockId ? latest : b))
         toast.error('다른 사용자가 수정했습니다. 최신 내용으로 되돌렸어요.')
@@ -90,7 +93,7 @@ export function useTripBlocks(tripId: string, initial: Block[]) {
         i === 0 ? min : Math.min(min, b.position - dayBlocks[i - 1].position), Infinity)
       if (minGap < 1e-4) await blockApi.reorder(tripId)
     } catch (err) {
-      if (isBlockApiError(err) && err.response?.data?.code === 'VERSION_CONFLICT') {
+      if (isAxiosError<BlockErrorBody>(err) && err.response?.data?.code === 'VERSION_CONFLICT') {
         const latest: Block = err.response.data.currentBlock ?? prev
         setBlocks((cur) => cur.map((b) => b.id === blockId ? latest : b))
         toast.error('다른 사용자가 수정했습니다.')
@@ -129,10 +132,6 @@ export function useTripBlocks(tripId: string, initial: Block[]) {
 
   return { blocks, setBlocks, handleTripEvent, addBlock, updateBlock, moveBlock, deleteBlock, lockBlock, unlockBlock }
 }
-
-// 블록 API 오류 응답 본문 (409 VERSION_CONFLICT면 currentBlock이 온다)
-type BlockApiError = AxiosError<{ code?: string; currentBlock?: Block }>
-const isBlockApiError = (err: unknown): err is BlockApiError => isAxiosError(err)
 
 // 423 ALREADY_LOCKED 안내 문구
 export const lockedMessage = (nickname: string | null) =>
