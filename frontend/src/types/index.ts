@@ -83,23 +83,23 @@ export interface AiGenerateResponse {
 }
 
 // SSE 실시간 이벤트
-export type TripEventAction = 'ADD' | 'UPDATE' | 'MOVE' | 'DELETE' | 'LOCK' | 'UNLOCK' | 'CONFLICT' | 'PRESENCE'
-
-export interface TripEvent {
-  action: TripEventAction
-  tripId: string
-  payload: TripEventPayload
+// action별 payload 형식. action으로 switch하면 payload 타입이 좁혀진다
+export interface TripEventPayloads {
+  ADD: Block
+  UPDATE: { blockId: string; block: Block }
+  MOVE: { blockId: string; dayNumber: number; position: number; version: number }
+  DELETE: { blockId: string }
+  LOCK: { blockId: string; lockedBy: string | null; lockedByNickname: string | null }
+  UNLOCK: { blockId: string }
+  CONFLICT: { blockId: string; currentBlock: Block }
+  PRESENCE: { users: Presence[] }
 }
 
-export type TripEventPayload =
-  | Block                                                                     // ADD
-  | { blockId: string; block: Block }                                        // UPDATE
-  | { blockId: string; dayNumber: number; position: number; version: number }// MOVE
-  | { blockId: string }                                                       // DELETE
-  | { blockId: string; lockedBy: string | null; lockedByNickname: string | null } // LOCK
-  | { blockId: string }                                                       // UNLOCK
-  | { blockId: string; currentBlock: Block }                                 // CONFLICT
-  | { users: Presence[] }                                                    // PRESENCE
+export type TripEventAction = keyof TripEventPayloads
+
+export type TripEvent = {
+  [A in TripEventAction]: { action: A; tripId: string; payload: TripEventPayloads[A] }
+}[TripEventAction]
 
 export const BLOCK_STYLE: Record<BlockType, { bg: string; border: string; badge: string; label: string }> = {
   HOTEL:     { bg: '#E1F5EE', border: '#1D9E75', badge: '#9FE1CB', label: '숙소' },

@@ -13,7 +13,7 @@ interface Props {
   days: TripDay[]
   blocks: Block[]
   onClose: () => void
-  onApply: (blocks: Array<AiGeneratedBlock & { dayNumber: number }>) => void
+  onApply: (blocks: Block[]) => void
 }
 
 type Step = 1 | 2 | 3
@@ -97,7 +97,7 @@ export default function AiModal({ open, tripId, days, blocks, onClose, onApply }
 
       const { data } = await aiApi.apply(tripId, { selectedBlocks })
       const addedBlocks = data.addedBlocks.map(({ block }) => block)
-      onApply(addedBlocks as any)
+      onApply(addedBlocks)
       setAppliedCount(selected.length)
       setStep(3)
     } catch {

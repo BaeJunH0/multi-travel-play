@@ -58,13 +58,23 @@ fetchEventSource(`/api/trips/${tripId}/events`, {
 ## 메시지 형식
 
 ```typescript
-interface TripEvent {
-  action: TripEventAction
-  tripId: string
-  payload: TripEventPayload
+interface TripEventPayloads {
+  ADD: Block
+  UPDATE: { blockId: string; block: Block }
+  MOVE: { blockId: string; dayNumber: number; position: number; version: number }
+  DELETE: { blockId: string }
+  LOCK: { blockId: string; lockedBy: string | null; lockedByNickname: string | null }
+  UNLOCK: { blockId: string }
+  CONFLICT: { blockId: string; currentBlock: Block }
+  PRESENCE: { users: Presence[] }
 }
 
-type TripEventAction = 'ADD' | 'UPDATE' | 'MOVE' | 'DELETE' | 'LOCK' | 'UNLOCK' | 'CONFLICT' | 'PRESENCE'
+type TripEventAction = keyof TripEventPayloads
+
+// action마다 payload 형식이 정해진 유니온. action으로 분기하면 payload 타입이 좁혀진다
+type TripEvent = {
+  [A in TripEventAction]: { action: A; tripId: string; payload: TripEventPayloads[A] }
+}[TripEventAction]
 ```
 
 SSE `data:` 한 줄이 이 형식의 JSON 하나입니다. `PRESENCE`는 `TripEditorPage`가, 나머지는 `useTripBlocks`의 `handleTripEvent`가 처리합니다.

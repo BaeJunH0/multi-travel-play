@@ -239,7 +239,7 @@ interface Props {
   days: TripDay[]
   blocks: Block[]   // 현재 블록 — apply 시 Day별 최대 position 계산용
   onClose: () => void
-  onApply: (blocks: Array<AiGeneratedBlock & { dayNumber: number }>) => void
+  onApply: (blocks: Block[]) => void   // apply API가 반환한 블록
 }
 ```
 
