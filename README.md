@@ -73,3 +73,12 @@ DB 테이블은 `backend/src/main/resources/schema.sql` 참고. `schema.sql`은 
 ## 문서
 
 API/DB/AI 프롬프트/테스트 문서는 [docs/](docs/) 디렉터리를, 프론트엔드 문서는 [docs/frontend/](docs/frontend/)를 참고하세요.
+
+## 코드 검증
+
+PR과 `main` 푸시마다 GitHub Actions가 아래 검사를 돌립니다. 규칙과 위반 수정 방법은 [린트·검증 컨벤션](docs/convention-lint.md)을 참고하세요.
+
+```bash
+cd backend && ./gradlew check                                    # ktlint + 테스트(ArchUnit 포함)
+cd frontend && npm ci && npm run lint && npm run typecheck        # eslint + 타입 검사
+```
