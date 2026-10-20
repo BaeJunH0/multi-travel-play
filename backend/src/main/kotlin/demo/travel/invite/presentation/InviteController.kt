@@ -6,20 +6,18 @@ import demo.travel.invite.application.InviteService
 import demo.travel.invite.presentation.dto.InviteResponse
 import demo.travel.user.User
 import org.springframework.http.HttpStatus
-import org.springframework.web.bind.annotation.*
+import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.PathVariable
+import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.ResponseStatus
+import org.springframework.web.bind.annotation.RestController
 import java.util.*
 
 @RestController
-class InviteController(
-    private val inviteService: InviteService,
-    private val frontendProperties: FrontendProperties,
-) {
+class InviteController(private val inviteService: InviteService, private val frontendProperties: FrontendProperties) {
 
     @PostMapping("/api/trips/{tripId}/invite")
-    fun createInviteLink(
-        @CurrentUser user: User,
-        @PathVariable tripId: UUID,
-    ): InviteResponse.Link =
+    fun createInviteLink(@CurrentUser user: User, @PathVariable tripId: UUID): InviteResponse.Link =
         InviteResponse.Link.of(inviteService.createInviteLink(tripId, user.id, frontendProperties.url))
 
     @GetMapping("/api/invite/{shareToken}")

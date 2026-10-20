@@ -32,7 +32,7 @@ class BudgetService(
         val trip = tripRepository.findByIdOrNull(command.tripId)
             ?: throw ResponseStatusException(HttpStatus.NOT_FOUND)
         val item = budgetRepository.save(
-            BudgetItem(trip = trip, category = command.category, amount = command.amount, memo = command.memo)
+            BudgetItem(trip = trip, category = command.category, amount = command.amount, memo = command.memo),
         )
         return BudgetResult.of(item)
     }

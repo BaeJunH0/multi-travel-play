@@ -20,7 +20,9 @@ class BudgetRepositoryTest : BehaviorSpec() {
     override fun extensions() = listOf(SpringExtension)
 
     @Autowired lateinit var userRepository: UserRepository
+
     @Autowired lateinit var tripRepository: TripRepository
+
     @Autowired lateinit var budgetRepository: BudgetRepository
 
     private fun savedUser(suffix: String) =
@@ -28,9 +30,12 @@ class BudgetRepositoryTest : BehaviorSpec() {
 
     private fun savedTrip(owner: User) = tripRepository.save(
         Trip(
-            owner = owner, title = "여행", destination = "서울",
-            startDate = LocalDate.of(2026, 8, 1), endDate = LocalDate.of(2026, 8, 3),
-        )
+            owner = owner,
+            title = "여행",
+            destination = "서울",
+            startDate = LocalDate.of(2026, 8, 1),
+            endDate = LocalDate.of(2026, 8, 3),
+        ),
     )
 
     private fun savedItem(trip: Trip, category: TripCategory = TripCategory.ETC, amount: Int = 10000) =
@@ -69,9 +74,12 @@ class BudgetRepositoryTest : BehaviorSpec() {
                     val trip1 = savedTrip(user)
                     val trip2 = tripRepository.save(
                         Trip(
-                            owner = user, title = "다른 여행", destination = "부산",
-                            startDate = LocalDate.of(2026, 9, 1), endDate = LocalDate.of(2026, 9, 2),
-                        )
+                            owner = user,
+                            title = "다른 여행",
+                            destination = "부산",
+                            startDate = LocalDate.of(2026, 9, 1),
+                            endDate = LocalDate.of(2026, 9, 2),
+                        ),
                     )
                     savedItem(trip1, TripCategory.TRANSPORT, 20000)
                     savedItem(trip2, TripCategory.ETC, 5000)

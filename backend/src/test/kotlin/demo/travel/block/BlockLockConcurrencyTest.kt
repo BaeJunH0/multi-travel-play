@@ -35,10 +35,15 @@ class BlockLockConcurrencyTest : BehaviorSpec() {
     override fun extensions() = listOf(SpringExtension)
 
     @Autowired lateinit var userRepository: UserRepository
+
     @Autowired lateinit var tripRepository: TripRepository
+
     @Autowired lateinit var tripMemberRepository: TripMemberRepository
+
     @Autowired lateinit var blockRepository: BlockRepository
+
     @Autowired lateinit var blockService: BlockService
+
     @Autowired lateinit var transactionManager: PlatformTransactionManager
 
     private fun savedUser(suffix: String) =
@@ -47,22 +52,30 @@ class BlockLockConcurrencyTest : BehaviorSpec() {
     private fun savedTrip(owner: User, editor: User): Trip {
         val trip = tripRepository.save(
             Trip(
-                owner = owner, title = "여행", destination = "서울",
-                startDate = LocalDate.of(2026, 8, 1), endDate = LocalDate.of(2026, 8, 3),
-            )
+                owner = owner,
+                title = "여행",
+                destination = "서울",
+                startDate = LocalDate.of(2026, 8, 1),
+                endDate = LocalDate.of(2026, 8, 3),
+            ),
         )
         tripMemberRepository.save(TripMember(trip = trip, user = owner, role = TripRole.OWNER))
         tripMemberRepository.save(TripMember(trip = trip, user = editor, role = TripRole.EDITOR))
         return trip
     }
 
-    private fun savedLockedBlock(trip: Trip, locker: User, lockExpiresAt: LocalDateTime) =
-        blockRepository.save(
-            ScheduleBlock(
-                trip = trip, dayNumber = 1, position = 1.0, blockType = TripCategory.PLACE, placeName = "A",
-                createdBy = locker, lockedBy = locker, lockExpiresAt = lockExpiresAt,
-            )
-        )
+    private fun savedLockedBlock(trip: Trip, locker: User, lockExpiresAt: LocalDateTime) = blockRepository.save(
+        ScheduleBlock(
+            trip = trip,
+            dayNumber = 1,
+            position = 1.0,
+            blockType = TripCategory.PLACE,
+            placeName = "A",
+            createdBy = locker,
+            lockedBy = locker,
+            lockExpiresAt = lockExpiresAt,
+        ),
+    )
 
     /** 바깥 트랜잭션에서 잠긴 블록을 먼저 읽고, [concurrent]를 별도 트랜잭션으로 커밋한 뒤 [action]을 실행한다. */
     private fun <T> interleaved(concurrent: () -> Unit, action: () -> T): T {
@@ -71,7 +84,7 @@ class BlockLockConcurrencyTest : BehaviorSpec() {
             propagationBehavior = TransactionDefinition.PROPAGATION_REQUIRES_NEW
         }
         return outer.execute {
-            blockRepository.findAllByLockedByIsNotNull()  // heartbeat가 먼저 읽어 둔 상태
+            blockRepository.findAllByLockedByIsNotNull() // heartbeat가 먼저 읽어 둔 상태
             inner.executeWithoutResult { concurrent() }
             action()
         }!!

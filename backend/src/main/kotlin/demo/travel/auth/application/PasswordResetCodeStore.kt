@@ -11,9 +11,7 @@ import java.util.concurrent.ConcurrentHashMap
  * 서버를 재시작하면 발송된 코드는 사라진다 (단일 인스턴스 전제).
  */
 @Component
-class PasswordResetCodeStore(
-    private val clock: Clock = Clock.systemUTC(),
-) {
+class PasswordResetCodeStore(private val clock: Clock = Clock.systemUTC()) {
     private data class Entry(val code: String, val expiresAt: Instant)
 
     private val codes = ConcurrentHashMap<String, Entry>()

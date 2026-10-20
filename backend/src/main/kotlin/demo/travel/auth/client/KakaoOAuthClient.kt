@@ -1,12 +1,12 @@
 package demo.travel.auth.client
 
+import com.fasterxml.jackson.annotation.JsonProperty
 import demo.travel.auth.client.dto.KakaoUserInfo
 import org.springframework.http.MediaType
 import org.springframework.http.client.JdkClientHttpRequestFactory
 import org.springframework.stereotype.Component
 import org.springframework.util.LinkedMultiValueMap
 import org.springframework.web.client.RestClient
-import com.fasterxml.jackson.annotation.JsonProperty
 import java.net.http.HttpClient
 import java.time.Duration
 
@@ -23,11 +23,10 @@ class KakaoOAuthClient(private val props: KakaoProperties) {
         .requestFactory(requestFactory())
         .build()
 
-    fun authorizationUrl(): String =
-        "https://kauth.kakao.com/oauth/authorize" +
-                "?client_id=${props.clientId}" +
-                "&redirect_uri=${props.redirectUri}" +
-                "&response_type=code"
+    fun authorizationUrl(): String = "https://kauth.kakao.com/oauth/authorize" +
+        "?client_id=${props.clientId}" +
+        "&redirect_uri=${props.redirectUri}" +
+        "&response_type=code"
 
     fun fetchAccessToken(code: String): String {
         val body = LinkedMultiValueMap<String, String>().apply {
@@ -60,25 +59,17 @@ class KakaoOAuthClient(private val props: KakaoProperties) {
         )
     }
 
-    private data class KakaoTokenResponse(
-        @JsonProperty("access_token") val accessToken: String,
-    )
+    private data class KakaoTokenResponse(@JsonProperty("access_token") val accessToken: String)
 
-    private data class KakaoMeResponse(
-        val id: Long,
-        @JsonProperty("kakao_account") val kakaoAccount: KakaoAccount,
-    )
+    private data class KakaoMeResponse(val id: Long, @JsonProperty("kakao_account") val kakaoAccount: KakaoAccount)
 
-    private data class KakaoAccount(
-        val email: String?,
-        val profile: KakaoProfile,
-    )
+    private data class KakaoAccount(val email: String?, val profile: KakaoProfile)
 
     private data class KakaoProfile(val nickname: String)
 
     companion object {
         private fun requestFactory() = JdkClientHttpRequestFactory(
-            HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build()
+            HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build(),
         ).apply { setReadTimeout(Duration.ofSeconds(10)) }
     }
 }

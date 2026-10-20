@@ -26,7 +26,7 @@ interface BlockRepository : JpaRepository<ScheduleBlock, UUID> {
     @Modifying
     @Query(
         "UPDATE ScheduleBlock b SET b.lockedBy = NULL, b.lockExpiresAt = NULL " +
-            "WHERE b.id = :blockId AND b.lockedBy IS NOT NULL AND (b.lockExpiresAt IS NULL OR b.lockExpiresAt <= :now)"
+            "WHERE b.id = :blockId AND b.lockedBy IS NOT NULL AND (b.lockExpiresAt IS NULL OR b.lockExpiresAt <= :now)",
     )
     fun releaseExpiredLock(blockId: UUID, now: LocalDateTime): Int
 }

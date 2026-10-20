@@ -5,10 +5,7 @@ import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.Size
 
 object AuthRequest {
-    data class Login(
-        @field:Email val email: String,
-        @field:NotBlank val password: String,
-    )
+    data class Login(@field:Email val email: String, @field:NotBlank val password: String)
 
     data class Signup(
         @field:Email val email: String,

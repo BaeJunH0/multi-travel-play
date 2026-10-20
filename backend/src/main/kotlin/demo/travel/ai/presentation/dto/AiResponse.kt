@@ -7,9 +7,7 @@ import demo.travel.common.TripCategory
 /** AI 일정 생성(`generate`) / 확정 저장(`apply`) API의 응답 DTO 모음. */
 object AiResponse {
     /** `generate` API 응답. DB에는 아무것도 저장되지 않은, AI가 제안한 블록 목록. */
-    data class Generate(
-        val blocks: List<SuggestedBlock>,
-    ) {
+    data class Generate(val blocks: List<SuggestedBlock>) {
         companion object {
             fun of(result: AiResult.Generate) = Generate(result.blocks.map { SuggestedBlock.of(it) })
         }
@@ -58,10 +56,7 @@ object AiResponse {
      * @param tempId 저장 요청에 쓰였던 원본 [SuggestedBlock.tempId]. 프론트에서 어떤 AI 제안이
      *   어떤 저장 결과([block])로 이어졌는지 매칭할 때 사용.
      */
-    data class AppliedBlock(
-        val tempId: String,
-        val block: BlockResponse,
-    ) {
+    data class AppliedBlock(val tempId: String, val block: BlockResponse) {
         companion object {
             fun of(result: AiResult.AppliedBlock) = AppliedBlock(
                 tempId = result.tempId,

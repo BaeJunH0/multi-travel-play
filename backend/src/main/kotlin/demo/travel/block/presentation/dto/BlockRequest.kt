@@ -24,9 +24,5 @@ object BlockRequest {
         @field:NotNull val version: Long,
     )
 
-    data class Move(
-        @field:NotNull val dayNumber: Int,
-        @field:NotNull val position: Double,
-        @field:NotNull val version: Long,
-    )
+    data class Move(@field:NotNull val dayNumber: Int, @field:NotNull val position: Double, @field:NotNull val version: Long)
 }

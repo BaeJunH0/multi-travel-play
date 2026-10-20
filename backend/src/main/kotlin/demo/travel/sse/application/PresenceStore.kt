@@ -23,6 +23,5 @@ class PresenceStore {
         store[tripId]?.remove(userId)
     }
 
-    fun getUsers(tripId: UUID): List<PresenceUser> =
-        store[tripId]?.values?.toList() ?: emptyList()
+    fun getUsers(tripId: UUID): List<PresenceUser> = store[tripId]?.values?.toList() ?: emptyList()
 }

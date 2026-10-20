@@ -8,17 +8,16 @@ import java.util.*
 class TripConnection(
     val tripId: UUID,
     val userId: UUID,
-    val emitter: SseEmitter = SseEmitter(0L),  // 시간 제한 없음. 끊김은 heartbeat 전송 실패로 감지한다
+    val emitter: SseEmitter = SseEmitter(0L), // 시간 제한 없음. 끊김은 heartbeat 전송 실패로 감지한다
 ) {
     /** 전송에 실패하면 끊긴 연결로 보고 emitter를 종료한 뒤 false를 반환한다. */
-    fun send(event: SseEmitter.SseEventBuilder): Boolean =
-        try {
-            emitter.send(event)
-            true
-        } catch (e: Exception) {
-            emitter.completeWithError(e)
-            false
-        }
+    fun send(event: SseEmitter.SseEventBuilder): Boolean = try {
+        emitter.send(event)
+        true
+    } catch (e: Exception) {
+        emitter.completeWithError(e)
+        false
+    }
 }
 
 /** 서버 메모리에 SSE 연결을 보관한다 (단일 인스턴스 전제). */

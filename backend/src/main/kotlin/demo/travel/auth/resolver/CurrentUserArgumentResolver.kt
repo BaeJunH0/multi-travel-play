@@ -15,13 +15,10 @@ import org.springframework.web.server.ResponseStatusException
 import java.util.UUID
 
 @Component
-class CurrentUserArgumentResolver(
-    private val userRepository: UserRepository,
-) : HandlerMethodArgumentResolver {
+class CurrentUserArgumentResolver(private val userRepository: UserRepository) : HandlerMethodArgumentResolver {
 
-    override fun supportsParameter(parameter: MethodParameter) =
-        parameter.hasParameterAnnotation(CurrentUser::class.java) &&
-                parameter.parameterType == User::class.java
+    override fun supportsParameter(parameter: MethodParameter) = parameter.hasParameterAnnotation(CurrentUser::class.java) &&
+        parameter.parameterType == User::class.java
 
     override fun resolveArgument(
         parameter: MethodParameter,

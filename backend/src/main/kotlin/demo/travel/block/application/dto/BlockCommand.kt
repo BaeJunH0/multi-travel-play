@@ -28,12 +28,5 @@ object BlockCommand {
         val userId: UUID,
     )
 
-    data class Move(
-        val tripId: UUID,
-        val blockId: UUID,
-        val dayNumber: Int,
-        val position: Double,
-        val version: Long,
-        val userId: UUID,
-    )
+    data class Move(val tripId: UUID, val blockId: UUID, val dayNumber: Int, val position: Double, val version: Long, val userId: UUID)
 }

@@ -1,6 +1,9 @@
 package demo.travel.auth
 
-import jakarta.persistence.*
+import jakarta.persistence.Column
+import jakarta.persistence.Entity
+import jakarta.persistence.Id
+import jakarta.persistence.Table
 import java.util.*
 
 /** 유저당 하나만 유지되는 refresh token. 새로 로그인하면 덮어쓰고, 로그아웃하면 삭제한다. */

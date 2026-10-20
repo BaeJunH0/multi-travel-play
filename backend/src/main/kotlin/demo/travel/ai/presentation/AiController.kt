@@ -33,34 +33,31 @@ class AiController(private val aiService: AiService) {
                 intensity = request.intensity,
                 extraRequest = request.extraRequest,
                 userId = user.id,
-            )
-        )
+            ),
+        ),
     )
 
     @PostMapping("/apply")
-    fun apply(
-        @CurrentUser user: User,
-        @PathVariable tripId: UUID,
-        @RequestBody request: AiRequest.Apply,
-    ): AiResponse.Apply = AiResponse.Apply.of(
-        aiService.apply(
-            AiCommand.Apply(
-                tripId = tripId,
-                selectedBlocks = request.selectedBlocks.map {
-                    AiCommand.SelectedBlock(
-                        tempId = it.tempId,
-                        blockType = it.blockType,
-                        placeName = it.placeName,
-                        startTime = it.startTime,
-                        durationMin = it.durationMin,
-                        cost = it.cost,
-                        memo = it.memo,
-                        dayNumber = it.dayNumber,
-                        position = it.position,
-                    )
-                },
-                userId = user.id,
-            )
+    fun apply(@CurrentUser user: User, @PathVariable tripId: UUID, @RequestBody request: AiRequest.Apply): AiResponse.Apply =
+        AiResponse.Apply.of(
+            aiService.apply(
+                AiCommand.Apply(
+                    tripId = tripId,
+                    selectedBlocks = request.selectedBlocks.map {
+                        AiCommand.SelectedBlock(
+                            tempId = it.tempId,
+                            blockType = it.blockType,
+                            placeName = it.placeName,
+                            startTime = it.startTime,
+                            durationMin = it.durationMin,
+                            cost = it.cost,
+                            memo = it.memo,
+                            dayNumber = it.dayNumber,
+                            position = it.position,
+                        )
+                    },
+                    userId = user.id,
+                ),
+            ),
         )
-    )
 }

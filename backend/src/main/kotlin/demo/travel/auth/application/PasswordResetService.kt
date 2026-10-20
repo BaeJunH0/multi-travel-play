@@ -62,6 +62,5 @@ class PasswordResetService(
         return jwtProvider.generate(user.id)
     }
 
-    private fun invalidResetToken() =
-        BusinessException("INVALID_RESET_TOKEN", "인증 코드가 올바르지 않거나 만료됐습니다.")
+    private fun invalidResetToken() = BusinessException("INVALID_RESET_TOKEN", "인증 코드가 올바르지 않거나 만료됐습니다.")
 }

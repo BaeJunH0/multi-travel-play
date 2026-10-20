@@ -7,10 +7,8 @@ import org.springframework.web.servlet.config.annotation.CorsRegistry
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer
 
 @Configuration
-class WebConfig(
-    private val currentUserArgumentResolver: CurrentUserArgumentResolver,
-    private val corsProperties: CorsProperties,
-) : WebMvcConfigurer {
+class WebConfig(private val currentUserArgumentResolver: CurrentUserArgumentResolver, private val corsProperties: CorsProperties) :
+    WebMvcConfigurer {
 
     override fun addArgumentResolvers(resolvers: MutableList<HandlerMethodArgumentResolver>) {
         resolvers.add(currentUserArgumentResolver)
@@ -20,6 +18,6 @@ class WebConfig(
         registry.addMapping("/api/**")
             .allowedOriginPatterns(*corsProperties.allowedOrigins.toTypedArray())
             .allowedMethods("GET", "POST", "PATCH", "DELETE")
-            .allowCredentials(true)  // refreshToken 쿠키
+            .allowCredentials(true) // refreshToken 쿠키
     }
 }

@@ -36,8 +36,5 @@ object AiResult {
     data class Apply(val addedBlocks: List<AppliedBlock>)
 
     /** @param tempId 저장 요청에 쓰였던 원본 tempId. 프론트가 제안과 저장 결과를 매칭할 때 쓴다. */
-    data class AppliedBlock(
-        val tempId: String,
-        val block: BlockResult,
-    )
+    data class AppliedBlock(val tempId: String, val block: BlockResult)
 }

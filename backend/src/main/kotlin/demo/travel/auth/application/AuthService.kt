@@ -2,10 +2,10 @@ package demo.travel.auth.application
 
 import demo.travel.auth.RefreshToken
 import demo.travel.auth.RefreshTokenRepository
-import demo.travel.auth.client.GoogleOAuthClient
-import demo.travel.auth.client.KakaoOAuthClient
 import demo.travel.auth.application.dto.AuthCommand
 import demo.travel.auth.application.dto.TokenPair
+import demo.travel.auth.client.GoogleOAuthClient
+import demo.travel.auth.client.KakaoOAuthClient
 import demo.travel.user.AuthProvider
 import demo.travel.user.User
 import demo.travel.user.UserRepository
@@ -38,7 +38,7 @@ class AuthService(
                 nickname = command.nickname,
                 provider = AuthProvider.LOCAL,
                 password = passwordEncoder.encode(command.password),
-            )
+            ),
         )
         return issueTokenPair(user.id)
     }
@@ -62,7 +62,7 @@ class AuthService(
 
         val email = userInfo.email ?: "${userInfo.id}@kakao.local"
         val user = userRepository.findByEmail(email) ?: userRepository.save(
-            User(email = email, nickname = userInfo.nickname, provider = AuthProvider.KAKAO)
+            User(email = email, nickname = userInfo.nickname, provider = AuthProvider.KAKAO),
         )
         return issueTokenPair(user.id)
     }
@@ -73,7 +73,7 @@ class AuthService(
 
         val email = userInfo.email ?: "${userInfo.sub}@google.local"
         val user = userRepository.findByEmail(email) ?: userRepository.save(
-            User(email = email, nickname = userInfo.name, provider = AuthProvider.GOOGLE)
+            User(email = email, nickname = userInfo.name, provider = AuthProvider.GOOGLE),
         )
         return issueTokenPair(user.id)
     }

@@ -31,8 +31,11 @@ class TripEventControllerTest {
     private var port: Int = 0
 
     @Autowired lateinit var userRepository: UserRepository
+
     @Autowired lateinit var tripRepository: TripRepository
+
     @Autowired lateinit var tripMemberRepository: TripMemberRepository
+
     @Autowired lateinit var jwtProvider: JwtProvider
 
     private val httpClient = HttpClient.newHttpClient()
@@ -43,9 +46,12 @@ class TripEventControllerTest {
     private fun savedTrip(owner: User): Trip {
         val trip = tripRepository.save(
             Trip(
-                owner = owner, title = "여행", destination = "서울",
-                startDate = LocalDate.of(2026, 8, 1), endDate = LocalDate.of(2026, 8, 3),
-            )
+                owner = owner,
+                title = "여행",
+                destination = "서울",
+                startDate = LocalDate.of(2026, 8, 1),
+                endDate = LocalDate.of(2026, 8, 3),
+            ),
         )
         tripMemberRepository.save(TripMember(trip = trip, user = owner, role = TripRole.OWNER))
         return trip

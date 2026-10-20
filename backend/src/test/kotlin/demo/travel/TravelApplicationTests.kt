@@ -9,5 +9,4 @@ class TravelApplicationTests {
     @Test
     fun contextLoads() {
     }
-
 }
