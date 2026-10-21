@@ -38,7 +38,7 @@ jobs:
             backend/build/reports/tests
 
   frontend:
-    name: frontend (lint + typecheck)
+    name: frontend (lint + typecheck + test)
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -53,3 +53,4 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run typecheck
+      - run: npm test
