@@ -616,12 +616,16 @@ npm test          # vitest run — 한 번 돌고 끝난다 (CI와 같다)
 npx vitest        # 파일을 고칠 때마다 다시 도는 watch 모드
 ```
 
-결과는 터미널과 `frontend/test-results/junit.xml`(JUnit XML)에 남는다. `test-results/`는 git에서 제외한다.
+결과는 터미널과 `frontend/test-results/junit.xml`(JUnit XML)에 남는다. `test-results/`는 git에서 제외하고, CI가 실패하면 artifact(`frontend-test-results`)로 올린다.
+
+Node는 `package.json`의 `engines`(`^22.22.2 || ^24.15.0 || >=26.0.0`)를 따른다. jsdom과 vitest가 요구하는 범위로, Vite만 쓸 때보다 좁다. CI는 Node 24를 쓴다.
 
 ### 8-2. 파일 위치와 형식
 
-- 테스트 파일은 대상 파일 옆에 `<대상>.test.ts`로 둔다. 예) `src/hooks/useTripBlocks.ts` → `src/hooks/useTripBlocks.test.ts`
+- 테스트 파일은 대상 파일 옆에 `<대상>.test.ts`(JSX가 필요하면 `.test.tsx`)로 둔다. 예) `src/hooks/useTripBlocks.ts` → `src/hooks/useTripBlocks.test.ts`
 - `describe`(대상) → `it`(조건과 기대 결과)로 쓴다. `describe`·`it`·`expect`는 `vitest`에서 직접 import한다(전역 주입을 쓰지 않는다).
+- 전역 주입을 쓰지 않으면 Testing Library가 렌더링 정리(`cleanup`)를 자동 등록하지 않는다. 그래서 `src/test/setup.ts`(`setupFiles`)에서 테스트마다 `cleanup`을 호출한다.
+- 이벤트를 차례로 받는 동작은 이벤트마다 `act`를 따로 감싸 실제처럼 렌더를 나눈다.
 - 훅은 `renderHook(() => useHook(...))`으로 렌더링하고, 상태를 바꾸는 호출은 `act(() => ...)`로 감싼 뒤 `result.current`를 확인한다.
 - 픽스처는 기본값을 채운 팩토리에 바꿀 필드만 넘긴다. 예) `block('a', { position: 2 })`
 

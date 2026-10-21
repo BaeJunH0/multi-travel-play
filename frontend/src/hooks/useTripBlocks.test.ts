@@ -24,10 +24,11 @@ const block = (id: string, overrides: Partial<Block> = {}): Block => ({
 })
 
 // 초기 블록으로 훅을 렌더링하고, SSE 이벤트를 차례로 흘려 넣는 헬퍼
+// SSE는 이벤트를 하나씩 따로 전달하므로 이벤트마다 별도 act로 감싸 렌더를 나눈다
 const setup = (initial: Block[]) => {
   const { result } = renderHook(() => useTripBlocks(TRIP_ID, initial))
   const emit = (...events: TripEvent[]) =>
-    act(() => events.forEach((e) => result.current.handleTripEvent(e)))
+    events.forEach((e) => act(() => result.current.handleTripEvent(e)))
   return { result, emit }
 }
 
