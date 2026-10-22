@@ -647,4 +647,4 @@ describe('useTripBlocks.handleTripEvent', () => {
 
 | 파일 | 대상 | 시나리오 수 |
 |------|------|------------|
-| `src/hooks/useTripBlocks.test.ts` | `lockedMessage`, `useTripBlocks.handleTripEvent` (SSE 이벤트 반영) | 5 |
+| `src/hooks/useTripBlocks.test.ts` | `lockedMessage`, `useTripBlocks.handleTripEvent` (SSE 이벤트 반영), `useTripBlocks.moveBlock` (재정렬 판단·실패 처리, `blockApi`·`toast`는 `vi.mock`) | 11 |
