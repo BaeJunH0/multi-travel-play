@@ -108,8 +108,9 @@ export function useTripBlocks(tripId: string, initial: Block[]) {
     if (!needsReorder(moved, updated.dayNumber)) return
     try {
       await blockApi.reorder(tripId)
-    } catch {
-      // 이동은 이미 저장됐으므로 화면을 되돌리거나 알리지 않는다. 다음 이동에서 다시 판단한다
+    } catch (err) {
+      // 이동은 이미 저장됐으므로 화면을 되돌리거나 토스트를 띄우지 않는다. 원인 추적용으로 콘솔에만 남긴다
+      console.warn('블록 재정렬에 실패했습니다.', err)
     }
   }, [tripId, blocks])
 

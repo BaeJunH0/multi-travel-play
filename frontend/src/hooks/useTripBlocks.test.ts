@@ -122,8 +122,10 @@ describe('useTripBlocks.moveBlock', () => {
   }
 
   beforeEach(() => {
-    vi.clearAllMocks()
+    // 호출 기록뿐 아니라 이전 테스트가 정한 응답(mockRejectedValue 등)도 지운다
+    vi.resetAllMocks()
     reorderApi.mockResolvedValue(response(undefined))
+    vi.spyOn(console, 'warn').mockImplementation(() => {})
   })
 
   it('#81-TC-1 이동이 저장되면 재정렬이 실패해도 이동 후 블록을 유지하고 실패 토스트를 띄우지 않는다', async () => {
@@ -136,6 +138,7 @@ describe('useTripBlocks.moveBlock', () => {
     expect(reorderApi).toHaveBeenCalledTimes(1) // 실패하는 재정렬 경로를 실제로 탔는지
     expect(result.current.blocks.find((x) => x.id === 'c')).toEqual({ ...c, position: 1.0001, version: 3 })
     expect(toastError).not.toHaveBeenCalled()
+    expect(console.warn).toHaveBeenCalled()
   })
 
   it('#81-TC-2 409 버전 충돌이면 currentBlock으로 바꾸고 충돌 토스트를 띄우며 재정렬하지 않는다', async () => {
