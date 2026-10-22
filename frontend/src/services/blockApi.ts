@@ -30,6 +30,7 @@ export const blockApi = {
   unlockBlock: (tripId: string, blockId: string) =>
     api.delete(`/trips/${tripId}/blocks/${blockId}/lock`),
 
+  // position이 바뀐 블록만 돌려준다 (version도 올라가 있다)
   reorder: (tripId: string) =>
-    api.post(`/trips/${tripId}/blocks/reorder`),
+    api.post<Block[]>(`/trips/${tripId}/blocks/reorder`),
 }
