@@ -156,6 +156,7 @@ class BlockService(
                     block
                 }
             }
+        if (changed.isEmpty()) return emptyList()
         blockRepository.flush()
         return changed.map { BlockResult.of(it) }
     }

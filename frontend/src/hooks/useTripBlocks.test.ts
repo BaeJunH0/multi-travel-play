@@ -200,6 +200,22 @@ describe('useTripBlocks.moveBlock', () => {
     expect(result.current.blocks).toEqual([a, reordered[1], reordered[0]])
   })
 
+  it('재정렬 응답보다 먼저 SSE로 더 새 version이 들어온 블록은 응답으로 덮어쓰지 않는다', async () => {
+    const c = block('c', { position: 3, version: 2 })
+    serverMoves(c)
+    const { result, emit } = setup([a, b, c])
+    const newerC = { ...c, position: 7, version: 9 }
+    reorderApi.mockImplementation(async () => {
+      // 응답이 오기 전에 다른 사용자의 이동이 SSE로 먼저 도착한다
+      emit({ action: 'MOVE', tripId: TRIP_ID, payload: { blockId: 'c', dayNumber: 1, position: 7, version: 9 } })
+      return response([{ ...c, position: 2, version: 4 }])
+    })
+
+    await act(() => result.current.moveBlock('c', 1, 1.0001))
+
+    expect(result.current.blocks.find((x) => x.id === 'c')).toEqual(newerC)
+  })
+
   it('#81-TC-6 이동 후에도 간격이 1e-4 이상이면 재정렬하지 않는다', async () => {
     const c = block('c', { position: 3 })
     serverMoves(c)

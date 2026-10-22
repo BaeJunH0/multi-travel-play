@@ -63,6 +63,8 @@ class BlockReorderPersistenceTest : BehaviorSpec() {
                     val stay = saved(1.0)
                     val second = saved(1.00005)
                     val third = saved(1.0001)
+                    // 재정렬 전 DB에 저장된 version
+                    val before = listOf(stay, second, third).associate { it.id to blockRepository.findById(it.id).get().version }
 
                     val results = blockService.reorderBlocks(trip.id, user.id)
 
@@ -71,9 +73,9 @@ class BlockReorderPersistenceTest : BehaviorSpec() {
                         val stored = blockRepository.findById(result.id).get()
                         result.position shouldBe stored.position
                         result.version shouldBe stored.version
-                        stored.version shouldBeGreaterThan 0L
+                        stored.version shouldBeGreaterThan before.getValue(result.id)
                     }
-                    blockRepository.findById(stay.id).get().version shouldBe stay.version
+                    blockRepository.findById(stay.id).get().version shouldBe before.getValue(stay.id)
                 }
             }
         }

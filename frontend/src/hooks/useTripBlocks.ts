@@ -109,8 +109,12 @@ export function useTripBlocks(tripId: string, initial: Block[]) {
     try {
       const { data: reordered } = await blockApi.reorder(tripId)
       // 재정렬로 position·version이 바뀐 블록을 반영해야 다음 요청이 409로 실패하지 않는다
+      // 응답보다 먼저 SSE로 더 새 version이 들어왔으면 그쪽을 유지한다
       const byId = new Map(reordered.map((b) => [b.id, b]))
-      setBlocks((cur) => cur.map((b) => byId.get(b.id) ?? b))
+      setBlocks((cur) => cur.map((b) => {
+        const next = byId.get(b.id)
+        return next && next.version >= b.version ? next : b
+      }))
     } catch (err) {
       // 이동은 이미 저장됐으므로 화면을 되돌리거나 토스트를 띄우지 않는다. 원인 추적용으로 콘솔에만 남긴다
       console.warn('블록 재정렬에 실패했습니다.', err)
