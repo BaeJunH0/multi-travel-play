@@ -13,6 +13,7 @@
 | 프론트 | `frontend/` | `npm ci` | lock 파일 그대로 깨끗하게 설치 (lock이 `package.json`과 어긋나면 실패) |
 | 프론트 | `frontend/` | `npm run lint` | eslint |
 | 프론트 | `frontend/` | `npm run typecheck` | TypeScript 타입 검사 (`tsc -b`) |
+| 프론트 | `frontend/` | `npm test` | Vitest 테스트 (`vitest run`). 작성 규칙은 [테스트 명세 8절](spec-test.md#8-프론트-테스트) |
 
 PR을 올리기 전에 로컬에서 바뀐 쪽 명령을 돌려 본다. CI의 두 job(`backend`, `frontend`)이 모두 통과해야 머지한다.
 

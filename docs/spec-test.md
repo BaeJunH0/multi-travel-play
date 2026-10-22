@@ -14,6 +14,8 @@
 | Repository (통합) | `@DataJpaTest` + H2 in-memory + `SpringExtension` | 쿼리 메서드 정확성, 정렬, 필터링 |
 | Domain/Entity (단위) | 순수 Kotest BehaviorSpec, 의존성 없음 | 엔티티 메서드, DTO 팩토리, 예외 구조 |
 
+프론트(`frontend/`) 테스트는 [8. 프론트 테스트](#8-프론트-테스트)에 따로 정리한다.
+
 ---
 
 ## 2. 의존성
@@ -595,3 +597,54 @@ Mockito는 Kotlin의 `final class` (data class 포함)를 기본 Mock할 수 없
 
 ### `reorderBlocks` 픽스처 전략
 Day별로 비정상적인 소수 position(`0.1`, `0.15`, `0.2`)을 가진 블록을 만들어, 서비스 실행 후 정수에 가까운 값(`1.0`, `2.0`, `3.0`)으로 재정규화되는지를 엔티티 필드 직접 비교로 확인한다.
+
+---
+
+## 8. 프론트 테스트
+
+### 8-1. 도구와 실행
+
+| 라이브러리 | 역할 |
+|-----------|------|
+| `vitest` | 테스트 러너·단언문. `vite.config.ts`의 `test` 항목으로 Vite 설정을 그대로 쓴다 |
+| `jsdom` | 브라우저 DOM 환경 (`test.environment: 'jsdom'`) |
+| `@testing-library/react` | 훅을 컴포넌트 없이 렌더링하는 `renderHook`, 상태 갱신을 감싸는 `act` |
+
+```bash
+cd frontend
+npm test          # vitest run — 한 번 돌고 끝난다 (CI와 같다)
+npx vitest        # 파일을 고칠 때마다 다시 도는 watch 모드
+```
+
+결과는 터미널과 `frontend/test-results/junit.xml`(JUnit XML)에 남는다. `test-results/`는 git에서 제외하고, CI가 실패하면 artifact(`frontend-test-results`)로 올린다.
+
+Node는 `package.json`의 `engines`(`^22.22.2 || ^24.15.0 || >=26.0.0`)를 따른다. jsdom과 vitest가 요구하는 범위로, Vite만 쓸 때보다 좁다. CI는 Node 24를 쓴다.
+
+### 8-2. 파일 위치와 형식
+
+- 테스트 파일은 대상 파일 옆에 `<대상>.test.ts`(JSX가 필요하면 `.test.tsx`)로 둔다. 예) `src/hooks/useTripBlocks.ts` → `src/hooks/useTripBlocks.test.ts`
+- `describe`(대상) → `it`(조건과 기대 결과)로 쓴다. `describe`·`it`·`expect`는 `vitest`에서 직접 import한다(전역 주입을 쓰지 않는다).
+- 전역 주입을 쓰지 않으면 Testing Library가 렌더링 정리(`cleanup`)를 자동 등록하지 않는다. 그래서 `src/test/setup.ts`(`setupFiles`)에서 테스트마다 `cleanup`을 호출한다.
+- 이벤트를 차례로 받는 동작은 이벤트마다 `act`를 따로 감싸 실제처럼 렌더를 나눈다.
+- 훅은 `renderHook(() => useHook(...))`으로 렌더링하고, 상태를 바꾸는 호출은 `act(() => ...)`로 감싼 뒤 `result.current`를 확인한다.
+- 픽스처는 기본값을 채운 팩토리에 바꿀 필드만 넘긴다. 예) `block('a', { position: 2 })`
+
+```ts
+describe('useTripBlocks.handleTripEvent', () => {
+  it('#82-TC-3 MOVE는 dayNumber·position·version만 바꾼다', () => {
+    const { result } = renderHook(() => useTripBlocks('trip-1', [block('a')]))
+    act(() => result.current.handleTripEvent({ action: 'MOVE', tripId: 'trip-1', payload: { /* ... */ } }))
+    expect(result.current.blocks[0]).toMatchObject({ dayNumber: 2 })
+  })
+})
+```
+
+### 8-3. 테스트 케이스 태그
+
+이슈의 테스트 케이스와 연결되는 테스트는 `it` 문구 맨 앞에 `#<이슈번호>-TC-<n>`을 넣는다(백엔드 `then(...)` 문구와 같은 규칙). JUnit XML의 testcase 이름에 그대로 남아, 이 태그로 해당 케이스의 통과 여부를 찾는다.
+
+### 8-4. 테스트 파일 목록
+
+| 파일 | 대상 | 시나리오 수 |
+|------|------|------------|
+| `src/hooks/useTripBlocks.test.ts` | `lockedMessage`, `useTripBlocks.handleTripEvent` (SSE 이벤트 반영) | 5 |
