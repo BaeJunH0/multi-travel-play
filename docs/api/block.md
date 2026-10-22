@@ -104,10 +104,11 @@ DELETE /api/trips/{tripId}/blocks/{blockId}
 ```
 POST /api/trips/{tripId}/blocks/reorder
 ```
-**응답** `204 No Content`
-- `position` 간격이 `1e-9` 미만으로 좁아졌을 때 호출
-- 각 day 내 블록을 `1.0, 2.0, 3.0 ...` 으로 재정규화
-- SSE 이벤트를 발행하지 않음
+**응답** `200 OK` — position이 바뀐 Block 객체 배열 (바뀐 블록이 없으면 `[]`)
+- 같은 day의 인접 `position` 간격이 `1e-4` 미만으로 좁아졌을 때 호출
+- 각 day 내 블록을 `1.0, 2.0, 3.0 ...` 으로 재정규화한다. position이 바뀐 블록은 `version`도 오른다
+- 응답 블록으로 화면을 교체해야 다음 수정·이동이 `409 VERSION_CONFLICT`로 실패하지 않는다
+- position이 바뀐 블록마다 `MOVE` SSE 이벤트를 발행한다
 - 최소 권한: EDITOR
 
 ---

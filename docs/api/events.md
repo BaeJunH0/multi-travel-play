@@ -40,7 +40,7 @@ data: {"action":"MOVE","tripId":"uuid","payload":{ }}
 | `CONFLICT` | 블록 수정·이동 시 version 충돌 | `{ blockId, currentBlock }` |
 | `PRESENCE` | 접속자 변경 | `{ users: [{ userId, nickname, avatarColor, activeDay }] }` |
 
-- 블록 이벤트(`ADD`~`DELETE`, `LOCK`)는 REST 요청이 성공한 뒤에만 발행된다. `CONFLICT`는 수정·이동 요청이 version 충돌로 실패했을 때 발행된다. `reorder`는 이벤트를 발행하지 않는다.
+- 블록 이벤트(`ADD`~`DELETE`, `LOCK`)는 REST 요청이 성공한 뒤에만 발행된다. `CONFLICT`는 수정·이동 요청이 version 충돌로 실패했을 때 발행된다. `reorder`는 position이 바뀐 블록마다 `MOVE`를 발행한다.
 - `UNLOCK`은 잠금 해제 API 외에, 잠금자의 마지막 연결이 끊기거나 잠금이 만료되어 서버가 해제할 때도 발행된다 (블록 문서의 "잠금 자동 해제" 참고).
 
 ### Heartbeat
