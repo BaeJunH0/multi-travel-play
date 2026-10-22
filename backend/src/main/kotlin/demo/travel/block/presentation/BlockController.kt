@@ -114,9 +114,11 @@ class BlockController(private val blockService: BlockService, private val eventP
         eventPublisher.publish(tripId, TripEvent.unlock(tripId, blockId))
     }
 
+    /** position이 바뀐 블록을 돌려주고, 다른 접속자도 맞추도록 블록마다 MOVE를 브로드캐스트한다. */
     @PostMapping("/reorder")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    fun reorder(@CurrentUser user: User, @PathVariable tripId: UUID) = blockService.reorderBlocks(tripId, user.id)
+    fun reorder(@CurrentUser user: User, @PathVariable tripId: UUID): List<BlockResponse> = blockService.reorderBlocks(tripId, user.id)
+        .onEach { eventPublisher.publish(tripId, TripEvent.move(tripId, it)) }
+        .map { BlockResponse.of(it) }
 
     /** version 충돌 시 다른 접속자에게도 CONFLICT를 알리고, 예외는 그대로 던져 요청자에게 409를 돌려준다. */
     private fun <T> broadcastingConflict(tripId: UUID, block: () -> T): T = try {

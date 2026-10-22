@@ -560,6 +560,7 @@ class BlockServiceTest :
                     )
                     every { tripMemberRepository.findByTripIdAndUserId(tripId, userId) } returns memberWith(TripRole.EDITOR)
                     every { blockRepository.findAllByTripIdOrderByDayNumberAscPositionAsc(tripId) } returns day1Blocks + day2Blocks
+                    every { blockRepository.flush() } just Runs
 
                     service.reorderBlocks(tripId, userId)
 
@@ -568,6 +569,35 @@ class BlockServiceTest :
                     day1Blocks[2].position shouldBe 3.0
                     day2Blocks[0].position shouldBe 1.0
                     day2Blocks[1].position shouldBe 2.0
+                }
+            }
+
+            `when`("이미 제자리인 블록과 position이 바뀌는 블록이 섞여 있을 때") {
+                then("#85-TC-1 position이 바뀐 블록만 flush 뒤 새 position으로 돌려준다") {
+                    fun at(dayNumber: Int, position: Double) = ScheduleBlock(
+                        trip = trip,
+                        dayNumber = dayNumber,
+                        position = position,
+                        blockType = TripCategory.PLACE,
+                        placeName = "장소",
+                        createdBy = user,
+                    )
+                    val stay1 = at(1, 1.0)
+                    val moved = at(1, 1.00005)
+                    val stay3 = at(1, 3.0)
+                    val stayDay2 = at(2, 1.0)
+                    every { tripMemberRepository.findByTripIdAndUserId(tripId, userId) } returns memberWith(TripRole.EDITOR)
+                    every { blockRepository.findAllByTripIdOrderByDayNumberAscPositionAsc(tripId) } returns
+                        listOf(stay1, moved, stay3, stayDay2)
+                    // flush 시점에 JPA가 올리는 version을 흉내 낸다. 결과가 flush 뒤에 만들어져야 올라간 version이 담긴다
+                    every { blockRepository.flush() } answers { moved.version += 1 }
+
+                    val results = service.reorderBlocks(tripId, userId)
+
+                    results.map { it.id } shouldBe listOf(moved.id)
+                    results.single().position shouldBe 2.0
+                    results.single().version shouldBe 1L
+                    verify(exactly = 1) { blockRepository.flush() }
                 }
             }
         }

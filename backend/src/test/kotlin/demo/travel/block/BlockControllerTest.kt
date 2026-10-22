@@ -5,14 +5,17 @@ import demo.travel.block.application.VersionConflictException
 import demo.travel.block.application.dto.BlockResult
 import demo.travel.block.presentation.BlockController
 import demo.travel.block.presentation.dto.BlockRequest
+import demo.travel.block.presentation.dto.BlockResponse
 import demo.travel.common.TripCategory
 import demo.travel.sse.application.TripEventPublisher
 import demo.travel.sse.application.dto.ConflictPayload
+import demo.travel.sse.application.dto.MovePayload
 import demo.travel.sse.application.dto.TripEvent
 import demo.travel.user.AuthProvider
 import demo.travel.user.User
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.BehaviorSpec
+import io.kotest.matchers.shouldBe
 import io.mockk.clearAllMocks
 import io.mockk.every
 import io.mockk.mockk
@@ -85,6 +88,35 @@ class BlockControllerTest :
 
                     verify(exactly = 1) { eventPublisher.publish(tripId, match { isConflictOf(it, 5L) }) }
                     verify(exactly = 0) { eventPublisher.publish(tripId, match { it.action == TripEvent.Action.MOVE }) }
+                }
+            }
+        }
+
+        given("reorder") {
+            fun isMoveOf(event: TripEvent, block: BlockResult) = event.action == TripEvent.Action.MOVE &&
+                event.payload == MovePayload(block.id, block.dayNumber, block.position, block.version)
+
+            `when`("position이 바뀐 블록이 있을 때") {
+                then("#85-TC-3 바뀐 블록을 돌려주고 블록마다 MOVE를 한 번씩 브로드캐스트한다") {
+                    val first = result(version = 2L).copy(id = UUID.randomUUID(), position = 2.0)
+                    val second = result(version = 4L).copy(id = UUID.randomUUID(), dayNumber = 2, position = 3.0)
+                    every { blockService.reorderBlocks(tripId, user.id) } returns listOf(first, second)
+
+                    val responses = controller.reorder(user, tripId)
+
+                    responses shouldBe listOf(BlockResponse.of(first), BlockResponse.of(second))
+                    verify(exactly = 1) { eventPublisher.publish(tripId, match { isMoveOf(it, first) }) }
+                    verify(exactly = 1) { eventPublisher.publish(tripId, match { isMoveOf(it, second) }) }
+                    verify(exactly = 2) { eventPublisher.publish(tripId, any()) }
+                }
+            }
+
+            `when`("바뀐 블록이 없을 때") {
+                then("#85-TC-4 빈 목록을 돌려주고 이벤트를 발행하지 않는다") {
+                    every { blockService.reorderBlocks(tripId, user.id) } returns emptyList()
+
+                    controller.reorder(user, tripId) shouldBe emptyList()
+                    verify(exactly = 0) { eventPublisher.publish(any(), any()) }
                 }
             }
         }

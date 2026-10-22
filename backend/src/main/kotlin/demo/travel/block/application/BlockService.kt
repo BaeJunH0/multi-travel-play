@@ -139,13 +139,25 @@ class BlockService(
         return released
     }
 
-    fun reorderBlocks(tripId: UUID, userId: UUID) {
+    /**
+     * 각 Day의 position을 1.0, 2.0, 3.0 ...으로 다시 매기고, position이 실제로 바뀐 블록만 돌려준다.
+     * flush 뒤에 결과를 만들어야 JPA가 올린 version이 담긴다. (클라이언트·SSE가 이 version으로 다음 요청을 보낸다)
+     */
+    fun reorderBlocks(tripId: UUID, userId: UUID): List<BlockResult> {
         requireEditorOrAbove(tripId, userId)
-        val blocks = blockRepository.findAllByTripIdOrderByDayNumberAscPositionAsc(tripId)
-        val grouped = blocks.groupBy { it.dayNumber }
-        grouped.values.forEach { dayBlocks ->
-            dayBlocks.forEachIndexed { i, block -> block.position = (i + 1).toDouble() }
-        }
+        val changed = blockRepository.findAllByTripIdOrderByDayNumberAscPositionAsc(tripId)
+            .groupBy { it.dayNumber }
+            .values
+            .flatMap { dayBlocks ->
+                dayBlocks.mapIndexedNotNull { i, block ->
+                    val position = (i + 1).toDouble()
+                    if (block.position == position) return@mapIndexedNotNull null
+                    block.position = position
+                    block
+                }
+            }
+        blockRepository.flush()
+        return changed.map { BlockResult.of(it) }
     }
 
     private fun findBlockOrThrow(blockId: UUID, tripId: UUID): ScheduleBlock {
