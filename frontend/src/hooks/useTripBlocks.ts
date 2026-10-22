@@ -84,14 +84,9 @@ export function useTripBlocks(tripId: string, initial: Block[]) {
     setBlocks((cur) => cur.map((b) =>
       b.id === blockId ? { ...b, dayNumber, position } : b
     ))
+    let updated: Block
     try {
-      const { data: updated } = await blockApi.moveBlock(tripId, blockId, { dayNumber, position, version: prev.version })
-      setBlocks((cur) => cur.map((b) => b.id === blockId ? updated : b))
-      // position gap이 너무 작으면 reorder
-      const dayBlocks = blocks.filter((b) => b.dayNumber === dayNumber).sort((a, b) => a.position - b.position)
-      const minGap = dayBlocks.reduce((min, b, i) =>
-        i === 0 ? min : Math.min(min, b.position - dayBlocks[i - 1].position), Infinity)
-      if (minGap < 1e-4) await blockApi.reorder(tripId)
+      ({ data: updated } = await blockApi.moveBlock(tripId, blockId, { dayNumber, position, version: prev.version }))
     } catch (err) {
       if (isAxiosError<BlockErrorBody>(err) && err.response?.data?.code === 'VERSION_CONFLICT') {
         const latest: Block = err.response.data.currentBlock ?? prev
@@ -104,6 +99,18 @@ export function useTripBlocks(tripId: string, initial: Block[]) {
         setBlocks((cur) => cur.map((b) => b.id === blockId ? prev : b))
         toast.error('이동에 실패했습니다.')
       }
+      return
+    }
+    setBlocks((cur) => cur.map((b) => b.id === blockId ? updated : b))
+
+    // 이동이 반영된 목록으로 대상 Day의 position 간격을 본다
+    const moved = blocks.map((b) => b.id === blockId ? updated : b)
+    if (!needsReorder(moved, updated.dayNumber)) return
+    try {
+      await blockApi.reorder(tripId)
+    } catch (err) {
+      // 이동은 이미 저장됐으므로 화면을 되돌리거나 토스트를 띄우지 않는다. 원인 추적용으로 콘솔에만 남긴다
+      console.warn('블록 재정렬에 실패했습니다.', err)
     }
   }, [tripId, blocks])
 
@@ -131,6 +138,14 @@ export function useTripBlocks(tripId: string, initial: Block[]) {
     blockApi.unlockBlock(tripId, blockId), [tripId])
 
   return { blocks, setBlocks, handleTripEvent, addBlock, updateBlock, moveBlock, deleteBlock, lockBlock, unlockBlock }
+}
+
+// Day 안의 인접 position 간격이 이보다 작으면 서버에 재정렬을 요청한다
+const MIN_POSITION_GAP = 1e-4
+
+const needsReorder = (blocks: Block[], dayNumber: number) => {
+  const positions = blocks.filter((b) => b.dayNumber === dayNumber).map((b) => b.position).sort((x, y) => x - y)
+  return positions.some((p, i) => i > 0 && p - positions[i - 1] < MIN_POSITION_GAP)
 }
 
 // 423 ALREADY_LOCKED 안내 문구
