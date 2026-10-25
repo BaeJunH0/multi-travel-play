@@ -317,10 +317,11 @@ DELETE /api/trips/{tripId}/blocks/{blockId}
 ```
 POST /api/trips/{tripId}/blocks/reorder
 ```
-**응답** `204 No Content`
-- `position` 간격이 `1e-9` 미만으로 좁아졌을 때 호출
-- 각 day 내 블록을 `1.0, 2.0, 3.0 ...` 으로 재정규화
-- SSE 이벤트를 발행하지 않음
+**응답** `200 OK` — position이 바뀐 Block 객체 배열 (바뀐 블록이 없으면 `[]`)
+- 같은 day의 인접 `position` 간격이 `1e-4` 미만으로 좁아졌을 때 호출
+- 각 day 내 블록을 `1.0, 2.0, 3.0 ...` 으로 재정규화한다. position이 바뀐 블록은 `version`도 오른다
+- 응답 블록으로 화면을 교체해야 다음 수정·이동이 `409 VERSION_CONFLICT`로 실패하지 않는다
+- position이 바뀐 블록마다 `MOVE` SSE 이벤트를 발행한다
 - 최소 권한: EDITOR
 
 ---
@@ -618,7 +619,7 @@ data: {"action":"MOVE","tripId":"uuid","payload":{ }}
 | `CONFLICT` | 블록 수정·이동 시 version 충돌 | `{ blockId, currentBlock }` |
 | `PRESENCE` | 접속자 변경 | `{ users: [{ userId, nickname, avatarColor, activeDay }] }` |
 
-- 블록 이벤트(`ADD`~`DELETE`, `LOCK`)는 REST 요청이 성공한 뒤에만 발행된다. `CONFLICT`는 수정·이동 요청이 version 충돌로 실패했을 때 발행된다. `reorder`는 이벤트를 발행하지 않는다.
+- 블록 이벤트(`ADD`~`DELETE`, `LOCK`)는 REST 요청이 성공한 뒤에만 발행된다. `CONFLICT`는 수정·이동 요청이 version 충돌로 실패했을 때 발행된다. `reorder`는 position이 바뀐 블록마다 `MOVE`를 발행한다.
 - `UNLOCK`은 잠금 해제 API 외에, 잠금자의 마지막 연결이 끊기거나 잠금이 만료되어 서버가 해제할 때도 발행된다 (블록 문서의 "잠금 자동 해제" 참고).
 
 ### Heartbeat

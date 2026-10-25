@@ -124,7 +124,7 @@ describe('useTripBlocks.moveBlock', () => {
   beforeEach(() => {
     // 호출 기록뿐 아니라 이전 테스트가 정한 응답(mockRejectedValue 등)도 지운다
     vi.resetAllMocks()
-    reorderApi.mockResolvedValue(response(undefined))
+    reorderApi.mockResolvedValue(response<Block[]>([]))
     vi.spyOn(console, 'warn').mockImplementation(() => {})
   })
 
@@ -183,6 +183,37 @@ describe('useTripBlocks.moveBlock', () => {
 
     expect(reorderApi).toHaveBeenCalledTimes(1)
     expect(reorderApi).toHaveBeenCalledWith(TRIP_ID)
+  })
+
+  it('#85-TC-5 재정렬이 성공하면 응답 블록의 position·version으로 목록을 바꾼다', async () => {
+    const c = block('c', { position: 3, version: 2 })
+    serverMoves(c)
+    // 서버가 Day 1을 a·c·b 순서로 1, 2, 3으로 다시 매기고 version을 올린 결과
+    const reordered = [
+      { ...c, position: 2, version: 4 },
+      { ...b, position: 3, version: 1 },
+    ]
+    reorderApi.mockResolvedValue(response(reordered))
+
+    const result = await move([a, b, c], 'c', 1, 1.0001)
+
+    expect(result.current.blocks).toEqual([a, reordered[1], reordered[0]])
+  })
+
+  it('재정렬 응답보다 먼저 SSE로 더 새 version이 들어온 블록은 응답으로 덮어쓰지 않는다', async () => {
+    const c = block('c', { position: 3, version: 2 })
+    serverMoves(c)
+    const { result, emit } = setup([a, b, c])
+    const newerC = { ...c, position: 7, version: 9 }
+    reorderApi.mockImplementation(async () => {
+      // 응답이 오기 전에 다른 사용자의 이동이 SSE로 먼저 도착한다
+      emit({ action: 'MOVE', tripId: TRIP_ID, payload: { blockId: 'c', dayNumber: 1, position: 7, version: 9 } })
+      return response([{ ...c, position: 2, version: 4 }])
+    })
+
+    await act(() => result.current.moveBlock('c', 1, 1.0001))
+
+    expect(result.current.blocks.find((x) => x.id === 'c')).toEqual(newerC)
   })
 
   it('#81-TC-6 이동 후에도 간격이 1e-4 이상이면 재정렬하지 않는다', async () => {

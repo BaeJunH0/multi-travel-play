@@ -181,11 +181,11 @@ spring:
 | `auth/PasswordResetServiceTest.kt` | `PasswordResetService` | 7 |
 | `auth/PasswordResetCodeStoreTest.kt` | `PasswordResetCodeStore` (만료는 테스트용 Clock으로 검증) | 5 |
 | `trip/TripServiceTest.kt` | `TripService` | 14 |
-| `block/BlockServiceTest.kt` | `BlockService` (잠금 만료는 테스트용 Clock으로 검증) | 33 |
+| `block/BlockServiceTest.kt` | `BlockService` (잠금 만료는 테스트용 Clock으로 검증) | 34 |
 | `budget/BudgetServiceTest.kt` | `BudgetService` | 10 |
 | `ai/AiServiceTest.kt` | `AiService.apply` | 3 |
 | `ai/AnthropicClientTest.kt` | `AnthropicClient.parse` (Messages API 응답 파싱), `toAiException` (API 오류 매핑) | 9 |
-| `block/BlockControllerTest.kt` | `BlockController` 충돌 브로드캐스트 | 3 |
+| `block/BlockControllerTest.kt` | `BlockController` 충돌 · 재정렬 브로드캐스트 | 5 |
 | `sse/PresenceStoreTest.kt` | `PresenceStore`, `PresenceUser.avatarColorOf` | 5 |
 | `sse/TripConnectionRegistryTest.kt` | `TripConnectionRegistry`, `TripConnection.send` | 6 |
 | `sse/TripEventServiceTest.kt` | `TripEventService` (연결 · presence · 연결 종료 시 잠금 해제 · heartbeat) | 9 |
@@ -201,6 +201,7 @@ spring:
 | `block/BlockRepositoryTest.kt` | `BlockRepository` | 8 |
 | `budget/BudgetRepositoryTest.kt` | `BudgetRepository` | 4 |
 | `auth/RefreshTokenPersistenceTest.kt` | `RefreshTokenRepository`, `AuthService.login` → `refresh` | 2 |
+| `block/BlockReorderPersistenceTest.kt` | `BlockService.reorderBlocks`가 돌려주는 position·version과 DB 값 | 1 |
 
 ### Domain/Entity 단위 테스트
 
@@ -331,6 +332,7 @@ spring:
 | refreshLocks | 만료 지남, 그 사이 다른 사용자가 잠금 (0행) | 해제 목록에 넣지 않음 |
 | refreshLocks | 잠금자 연결 없음 + 만료 전 | UPDATE 호출 없음 |
 | reorderBlocks | Day별 복수 블록 | Day 내 1.0, 2.0, 3.0 ... 재정규화 |
+| reorderBlocks | 제자리 블록과 바뀌는 블록이 섞임 | position이 바뀐 블록만 `flush` 뒤 새 position·version으로 반환 |
 
 ### 6-3-1. AiService.apply
 
@@ -361,6 +363,14 @@ spring:
 | updateBlock | version 충돌 | `CONFLICT` 브로드캐스트, `VersionConflictException` 재전파, `UPDATE` 미발행 |
 | updateBlock | 정상 수정 | `UPDATE`만 브로드캐스트 |
 | moveBlock | version 충돌 | `CONFLICT` 브로드캐스트, `VersionConflictException` 재전파, `MOVE` 미발행 |
+| reorder | position이 바뀐 블록 2개 | 두 블록을 응답하고 블록마다 `MOVE` 1번씩 브로드캐스트 |
+| reorder | 바뀐 블록 없음 | 빈 목록 응답, 이벤트 미발행 |
+
+### 6-3-3-1. BlockReorderPersistenceTest (`@SpringBootTest`)
+
+| given | when | then |
+|-------|------|------|
+| blockService.reorderBlocks | Day 1 간격이 좁아짐 (1.0, 1.00005, 1.0001) | 바뀐 블록만 DB의 position·version과 같은 값으로 반환, version 증가. 제자리 블록(1.0)은 결과에 없고 version 유지 |
 
 ### 6-3-4. PresenceStore
 
@@ -647,4 +657,4 @@ describe('useTripBlocks.handleTripEvent', () => {
 
 | 파일 | 대상 | 시나리오 수 |
 |------|------|------------|
-| `src/hooks/useTripBlocks.test.ts` | `lockedMessage`, `useTripBlocks.handleTripEvent` (SSE 이벤트 반영), `useTripBlocks.moveBlock` (재정렬 판단·실패 처리, `blockApi`·`toast`는 `vi.mock`) | 11 |
+| `src/hooks/useTripBlocks.test.ts` | `lockedMessage`, `useTripBlocks.handleTripEvent` (SSE 이벤트 반영), `useTripBlocks.moveBlock` (재정렬 판단·응답 반영·실패 처리, `blockApi`·`toast`는 `vi.mock`) | 13 |
